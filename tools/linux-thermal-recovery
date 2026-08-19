@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (( EUID != 0 )); then
+  echo "请使用 sudo 运行：sudo linux-thermal-recovery {status|full-speed|automatic}" >&2
+  exit 1
+fi
+
+# Emergency fallback for the verified COLORFUL P16 TA 24 / CLV0001 backend only.
+modprobe acpi_call
+readonly CALL=/proc/acpi/call
+readonly METHOD='\_SB.WMI.WMBB'
+
+acpi_call() {
+  local command="$1" expected="$2" result
+  printf '%s\n' "$command" >"$CALL"
+  result="$(tr -d '\000\r\n' <"$CALL")"
+  [[ "$result" == "$expected" ]] || {
+    echo "ACPI 调用失败：$command -> $result（期望 $expected）" >&2
+    return 1
+  }
+}
+
+show_status() {
+  local n rpm
+  for n in 0 1 2 3; do
+    rpm="$(cat "/sys/bus/acpi/devices/INTC10A2:0$n/fan_speed_rpm" 2>/dev/null || echo N/A)"
+    printf 'Fan %s: %s RPM\n' "$((n + 1))" "$rpm"
+  done
+}
+
+case "${1:-}" in
+  status) show_status ;;
+  full-speed)
+    acpi_call "$METHOD 0x0 0x68 0xffffffff" '0x68'
+    echo '全部有效风扇通道已设为全速。'
+    show_status
+    ;;
+  automatic)
+    acpi_call "$METHOD 0x0 0x69 0x0000000f" '0x69'
+    echo '风扇已恢复 BIOS/EC 自动控制。'
+    show_status
+    ;;
+  *)
+    echo '用法：sudo linux-thermal-recovery {status|full-speed|automatic}' >&2
+    exit 2
+    ;;
+esac

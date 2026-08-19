@@ -1,0 +1,48 @@
+.TH LINUX-THERMAL-CONTROL 1 "2026-08-19" "linux-thermal-control 0.5.3" "User Commands"
+.SH NAME
+linux-thermal-control \- capability-aware Linux thermal controller
+.SH SYNOPSIS
+.B linux-thermal-control
+.SH DESCRIPTION
+Starts the unprivileged Qt Quick client. Hardware discovery, telemetry and fan
+writes are performed by a privileged daemon through system D-Bus. Control
+requests require Polkit authorization.
+.PP
+Closing the main window hides it to the Linux system tray and keeps the client
+running. Use the tray menu's Exit action to terminate the client. If the desktop
+does not provide a system tray, normal close behavior is retained so the window
+cannot become inaccessible.
+.SH TRAY MENU
+.TP
+.B Show Main Window
+Show, raise and activate the main window.
+.TP
+.B Hide Main Window
+Hide the main window while keeping the client running.
+.TP
+.B Exit
+Hide the tray icon and terminate the graphical client.
+.SH MODES
+.TP
+.B automatic
+Return each supported fan zone to its kernel-driver, firmware or controller
+automatic mode.
+.TP
+.B full-speed
+Set every controllable fan zone to its supported maximum. Read-only fans are
+not written.
+.TP
+.B custom-curve
+Apply saved per-zone temperature curves with sensor-failure and safety endpoint
+protection.
+.SH FILES
+.TP
+.I /var/lib/linux-thermal-control/curves.json
+Persisted per-zone curve profiles.
+.TP
+.I /usr/lib/systemd/system/linux-thermal-daemon.service
+Privileged hardware-control daemon.
+.SH SEE ALSO
+.BR systemctl (1),
+.BR sensors (1),
+.BR pkcheck (1)

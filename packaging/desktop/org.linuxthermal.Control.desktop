@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Linux Thermal Control
+Name[zh_CN]=Linux 热管理
+Comment=Capability-aware temperature and fan control
+Comment[zh_CN]=硬件能力感知的温度与风扇管理
+Exec=linux-thermal-control
+Icon=org.linuxthermal.Control
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=fan;thermal;cooling;hwmon;风扇;散热;温度;
+StartupNotify=false
+StartupWMClass=linux-thermal-control
+DBusActivatable=false

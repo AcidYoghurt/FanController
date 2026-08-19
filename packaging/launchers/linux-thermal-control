@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly app_root="${LINUX_THERMAL_APP_ROOT:-/usr/lib/linux-thermal-control}"
+export LD_LIBRARY_PATH="${app_root}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export QT_PLUGIN_PATH="${app_root}/plugins${QT_PLUGIN_PATH:+:${QT_PLUGIN_PATH}}"
+export QML2_IMPORT_PATH="${app_root}/qml${QML2_IMPORT_PATH:+:${QML2_IMPORT_PATH}}"
+# GNOME may keep stale startup-notification metadata across package upgrades.
+# The desktop file disables StartupNotify, and clearing inherited tokens here
+# prevents a cached launch request from leaving the pointer in a busy state.
+unset DESKTOP_STARTUP_ID
+unset XDG_ACTIVATION_TOKEN
+
+# The deployment currently ships the stable XCB platform plugin. Ubuntu
+# Wayland sessions normally provide XWayland; prefer it when no native Qt
+# Wayland platform plugin was deployed, even if the shell exports wayland.
+if [[ -n "${DISPLAY:-}" && ! -e "${app_root}/plugins/platforms/libqwayland-egl.so" ]]; then
+  export QT_QPA_PLATFORM=xcb
+fi
+
+exec "${app_root}/bin/linux-thermal-control" "$@"

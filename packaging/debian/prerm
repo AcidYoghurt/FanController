@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+service=linux-thermal-daemon.service
+
+if [ "$1" = remove ] || [ "$1" = deconfigure ]; then
+  /usr/libexec/linux-thermal-control/linux-thermal-daemon --set-mode automatic \
+    >/dev/null 2>&1 || true
+
+  if [ -d /run/systemd/system ] && command -v deb-systemd-invoke >/dev/null 2>&1; then
+    deb-systemd-invoke stop "$service" >/dev/null 2>&1 || true
+  fi
+  if command -v deb-systemd-helper >/dev/null 2>&1; then
+    deb-systemd-helper disable "$service" >/dev/null 2>&1 || true
+  fi
+fi
+exit 0

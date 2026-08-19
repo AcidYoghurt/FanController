@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly app_root="${LINUX_THERMAL_APP_ROOT:-/usr/lib/linux-thermal-control}"
+export LD_LIBRARY_PATH="${app_root}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export QT_PLUGIN_PATH="${app_root}/plugins${QT_PLUGIN_PATH:+:${QT_PLUGIN_PATH}}"
+export QML2_IMPORT_PATH="${app_root}/qml${QML2_IMPORT_PATH:+:${QML2_IMPORT_PATH}}"
+
+exec "${app_root}/libexec/linux-thermal-control/linux-thermal-daemon" "$@"

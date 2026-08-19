@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>Linux Thermal Control</vendor>
+
+  <action id="org.linuxthermal.control">
+    <description>Change thermal-control settings</description>
+    <description xml:lang="zh_CN">更改温度与风扇控制设置</description>
+    <message>Authentication is required to control system fans</message>
+    <message xml:lang="zh_CN">控制系统风扇需要管理员身份验证</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+</policyconfig>

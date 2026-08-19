@@ -1,0 +1,55 @@
+# CMake / Ninja build output
+/build/
+/CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+build.ninja
+.ninja_deps
+.ninja_log
+compile_commands.json
+install_manifest.txt
+
+# Debian packages and generated release artifacts
+/dist/
+*.deb
+*.ddeb
+*.changes
+*.buildinfo
+
+# Qt Creator / Qt tooling
+*.user
+*.user.*
+*.qmlproject.user
+.qtc_clangd/
+
+# Editors and IDEs
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~
+
+# Local agent/tool metadata
+/.agents/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Runtime, logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+core
+core.*
+
+# Environment and OS metadata
+.env
+.env.*
+.DS_Store
+Thumbs.db

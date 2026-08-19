@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=org.linuxthermal.Control1
+Exec=/usr/libexec/linux-thermal-control/linux-thermal-daemon
+User=root
+SystemdService=linux-thermal-daemon.service

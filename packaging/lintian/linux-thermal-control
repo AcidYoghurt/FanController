@@ -1,0 +1,2 @@
+# libicudata is an architecture-specific data container with no ELF DT_NEEDED entries.
+linux-thermal-control: shared-library-lacks-prerequisites usr/lib/linux-thermal-control/lib/libicudata.so.73.2

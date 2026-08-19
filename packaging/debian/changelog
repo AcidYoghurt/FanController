@@ -1,0 +1,15 @@
+linux-thermal-control (0.5.3-1) unstable; urgency=medium
+
+  * Change Control/Info navigation to a two-phase transition: the outgoing page
+    slides and fades fully to zero over 140 ms before the incoming page begins
+    its 200 ms slide-and-fade entrance.
+  * Preserve the existing directional motion while preventing visible text and
+    card overlap between the two pages.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Wed, 19 Aug 2026 23:59:59 +0800
+
+linux-thermal-control (0.5.2-1) unstable; urgency=medium
+
+  * Clear desktop startup activation tokens before QApplication construction.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Wed, 19 Aug 2026 23:58:00 +0800

@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+
+service=linux-thermal-daemon.service
+old_curve=/var/lib/colorful-fan-control/curves.json
+new_dir=/var/lib/linux-thermal-control
+new_curve=$new_dir/curves.json
+
+if [ -f "$old_curve" ] && [ ! -e "$new_curve" ]; then
+  install -d -m 0750 "$new_dir"
+  cp -p "$old_curve" "$new_curve"
+fi
+
+if command -v deb-systemd-helper >/dev/null 2>&1; then
+  deb-systemd-helper unmask "$service" >/dev/null || true
+  deb-systemd-helper enable "$service" >/dev/null || true
+fi
+
+if [ -d /run/systemd/system ] && command -v deb-systemd-invoke >/dev/null 2>&1; then
+  deb-systemd-invoke start "$service" >/dev/null || true
+fi
+
+update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+gtk-update-icon-cache -q /usr/share/icons/hicolor >/dev/null 2>&1 || true
+exit 0

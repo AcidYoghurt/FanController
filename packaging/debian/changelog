@@ -1,15 +1,54 @@
-linux-thermal-control (0.5.3-1) unstable; urgency=medium
+linux-thermal-control (0.5.10-1) unstable; urgency=medium
 
-  * Change Control/Info navigation to a two-phase transition: the outgoing page
-    slides and fades fully to zero over 140 ms before the incoming page begins
-    its 200 ms slide-and-fade entrance.
-  * Preserve the existing directional motion while preventing visible text and
-    card overlap between the two pages.
+  * Remove the Info-page judgement and recommendation about whether Secure Boot
+    needs to be disabled.
+  * Keep only the current Secure Boot state in the Info page.
 
- -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Wed, 19 Aug 2026 23:59:59 +0800
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Thu, 20 Aug 2026 16:20:00 +0800
 
-linux-thermal-control (0.5.2-1) unstable; urgency=medium
+linux-thermal-control (0.5.9-1) unstable; urgency=medium
 
-  * Clear desktop startup activation tokens before QApplication construction.
+  * Enforce one graphical instance per user desktop session through a session
+    D-Bus service.
+  * Restore, raise and activate the existing window when the application icon,
+    dock New Window action or executable is launched again.
+  * Add a two-process single-instance and hidden-window activation test.
 
- -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Wed, 19 Aug 2026 23:58:00 +0800
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Thu, 20 Aug 2026 15:45:00 +0800
+
+linux-thermal-control (0.5.8-1) unstable; urgency=medium
+
+  * Pre-authorize active local desktop sessions through the installed Polkit
+    action so routine fan-mode and curve changes do not request a password.
+  * Continue denying inactive and remote sessions from changing hardware state.
+  * Add package-policy regression checks and document the authorization scope.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Thu, 20 Aug 2026 15:10:00 +0800
+
+linux-thermal-control (0.5.7-1) unstable; urgency=medium
+
+  * Show only one representative CPU temperature and one representative GPU
+    temperature, preferring package-level sensors over per-core duplicates.
+  * Apply thermal-mode and edited custom-curve requests immediately without a
+    confirmation dialog.
+  * Add representative temperature-sensor selection regression tests.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Thu, 20 Aug 2026 14:30:00 +0800
+
+linux-thermal-control (0.5.6-1) unstable; urgency=medium
+
+  * Fix Clevo acpi_call response parsing by truncating at the first NUL byte
+    instead of deleting NUL bytes and concatenating stale kernel-buffer data.
+  * Accept valid responses such as "0x69\\0alled" as 0x69 while preserving
+    rejection of real ACPI error tokens.
+  * Reload systemd and system D-Bus configuration before starting the daemon on
+    first installation, and restart the service on fresh installs and upgrades.
+  * Add ACPI response and maintainer-script regression tests.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Thu, 20 Aug 2026 10:45:00 +0800
+
+linux-thermal-control (0.5.4-1) unstable; urgency=medium
+
+  * Re-detect late hwmon devices and restore AMD GPU telemetry.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Thu, 20 Aug 2026 09:15:00 +0800

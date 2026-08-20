@@ -3,8 +3,21 @@ set -e
 
 service=linux-thermal-daemon.service
 
+reload_dbus_config() {
+  if command -v dbus-send >/dev/null 2>&1 && [ -S /run/dbus/system_bus_socket ]; then
+    dbus-send --system --type=method_call \
+      --dest=org.freedesktop.DBus / org.freedesktop.DBus.ReloadConfig \
+      >/dev/null 2>&1 || true
+  fi
+}
+
 if [ "$1" = purge ] && command -v deb-systemd-helper >/dev/null 2>&1; then
   deb-systemd-helper purge "$service" >/dev/null 2>&1 || true
+fi
+
+if [ -d /run/systemd/system ]; then
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  reload_dbus_config
 fi
 
 update-desktop-database /usr/share/applications >/dev/null 2>&1 || true

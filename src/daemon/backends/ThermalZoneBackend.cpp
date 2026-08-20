@@ -56,7 +56,7 @@ Thermal::BackendInfo ThermalZoneBackend::info() const {
   return {QStringLiteral("thermal-zone"),
           QStringLiteral("Linux thermal zones"),
           QStringLiteral("thermal_sys"),
-          ready ? QStringLiteral("ready") : QStringLiteral("unsupported"),
+          ready ? QStringLiteral("read-only") : QStringLiteral("unsupported"),
           QStringLiteral("Read-only fallback when CPU or GPU hwmon sensors are absent"),
           {ready, false, false, false}};
 }

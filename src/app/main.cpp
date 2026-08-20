@@ -1,4 +1,5 @@
 #include "Constants.h"
+#include "SingleInstanceController.h"
 #include "TrayController.h"
 
 #include <QApplication>
@@ -41,7 +42,13 @@ int main(int argc, char *argv[]) {
                     QStringLiteral("Run the automated tray lifecycle test and exit.")});
   parser.addOption({QStringLiteral("test-page-navigation"),
                     QStringLiteral("Verify Control/Info page navigation and exit.")});
+  parser.addOption({QStringLiteral("test-single-instance-primary"),
+                    QStringLiteral("Wait for a second launch, verify activation and exit.")});
   parser.process(app);
+
+  SingleInstanceController singleInstance;
+  if (!singleInstance.isPrimary())
+    return singleInstance.activatePrimary() ? 0 : 1;
 
   QQuickStyle::setStyle(QStringLiteral("Basic"));
 
@@ -64,6 +71,23 @@ int main(int argc, char *argv[]) {
   if (!window)
     return -1;
   trayController.setWindow(window);
+  QObject::connect(&singleInstance,
+                   &SingleInstanceController::activationRequested,
+                   &trayController, &TrayController::showWindow);
+  if (singleInstance.takePendingActivation())
+    trayController.showWindow();
+
+  if (parser.isSet(QStringLiteral("test-single-instance-primary"))) {
+    QTimer::singleShot(150, &trayController, &TrayController::hideWindow);
+    QObject::connect(&singleInstance,
+                     &SingleInstanceController::activationRequested, &app,
+                     [window] {
+                       QTimer::singleShot(150, window, [window] {
+                         QCoreApplication::exit(window->isVisible() ? 0 : 13);
+                       });
+                     });
+    QTimer::singleShot(5000, &app, [] { QCoreApplication::exit(14); });
+  }
 
   if (parser.isSet(QStringLiteral("test-tray-lifecycle"))) {
     if (!forceTrayForTests)

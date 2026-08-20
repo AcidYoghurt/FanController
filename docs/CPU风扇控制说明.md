@@ -33,7 +33,7 @@ amdgpu、i915、nouveau、thinkpad、dell_smm、asus、nct6775 等
 ## 2. 安装与启动
 
 ```bash
-sudo apt install ./dist/linux-thermal-control_0.5.3-1_amd64.deb
+sudo apt install ./dist/linux-thermal-control_0.5.10-1_amd64.deb
 sudo systemctl enable --now linux-thermal-daemon.service
 systemctl status linux-thermal-daemon.service
 journalctl -u linux-thermal-daemon.service -b
@@ -80,7 +80,7 @@ gdbus call --system \
   --method org.linuxthermal.Control1.GetStatus
 ```
 
-模式切换会触发 Polkit：
+安装软件包时已经写入 Polkit 授权策略。当前活动的本地桌面会话切换模式时会直接获得授权，不再弹出管理员密码窗口；非活动会话和远程会话仍然被拒绝：
 
 ```bash
 gdbus call --system \
@@ -190,3 +190,21 @@ sudo apt remove linux-thermal-control
 ```
 
 服务停止和卸载脚本都会尝试恢复自动模式，但固件行为因硬件而异；卸载后应观察风扇转速是否重新由 BIOS/驱动调节。
+
+## 首次安装后 GUI 显示“服务未连接”
+
+从 `0.5.6` 开始，安装脚本会自动执行 systemd manager reload、system D-Bus ReloadConfig，并启动 `linux-thermal-daemon.service`。正常情况下只安装 deb 即可：
+
+```bash
+sudo apt install ./linux-thermal-control_0.5.10-1_amd64.deb
+```
+
+诊断命令：
+
+```bash
+systemctl status linux-thermal-daemon.service
+journalctl -u linux-thermal-daemon.service -b
+busctl status org.linuxthermal.Control1
+```
+
+COLORFUL P16 TA 24 若日志曾出现 `Unexpected ACPI response: 0x69alled`，这是旧版本错误删除 NUL 字节后拼接 `acpi_call` 缓冲区残留造成的；`0.5.6` 已在第一个 NUL 字节处截断响应。

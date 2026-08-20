@@ -18,6 +18,7 @@ public:
   [[nodiscard]] Thermal::Result setFullSpeed(const QString &zoneId) override;
   [[nodiscard]] Thermal::Result setDuty(const QString &zoneId,
                                         int percent) override;
+  [[nodiscard]] static QByteArray normalizeAcpiResponse(QByteArray response);
 
 private:
   [[nodiscard]] Thermal::Result call(const QByteArray &command,

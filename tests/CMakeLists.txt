@@ -39,6 +39,21 @@ target_compile_definitions(linux-thermal-tests PRIVATE
     QT_NO_CAST_TO_ASCII
 )
 
+qt_add_executable(temperature-sensor-selector-tests
+    TemperatureSensorSelectorTest.cpp
+)
+
+target_link_libraries(temperature-sensor-selector-tests PRIVATE
+    LinuxThermalControl::Common
+    Qt6::Core
+    Qt6::Test
+)
+
+target_compile_definitions(temperature-sensor-selector-tests PRIVATE
+    QT_NO_CAST_FROM_ASCII
+    QT_NO_CAST_TO_ASCII
+)
+
 qt_add_executable(hwmon-backend-tests
     HwmonBackendTest.cpp
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/HwmonBackend.cpp
@@ -159,6 +174,7 @@ target_compile_definitions(linux-thermal-dbus-tests PRIVATE
 )
 
 add_test(NAME linux-thermal-unit-tests COMMAND linux-thermal-tests)
+add_test(NAME temperature-sensor-selector-unit-tests COMMAND temperature-sensor-selector-tests)
 add_test(NAME hwmon-backend-unit-tests COMMAND hwmon-backend-tests)
 add_test(NAME platform-backend-unit-tests COMMAND platform-backend-tests)
 add_test(NAME nvidia-backend-unit-tests COMMAND nvidia-backend-tests)
@@ -169,6 +185,15 @@ set_tests_properties(tray-controller-unit-tests PROPERTIES
 set_tests_properties(nvidia-backend-unit-tests PROPERTIES
     ENVIRONMENT "THERMAL_CONTROL_NVML_LIBRARY=$<TARGET_FILE:fake-nvml>"
 )
+add_test(NAME packaging-maintainer-scripts-tests
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/PackagingScriptsTest.sh
+)
+
+add_test(NAME linux-thermal-single-instance-tests
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/run-single-instance-test.sh
+            $<TARGET_FILE:linux-thermal-control>
+)
+
 add_test(NAME linux-thermal-dbus-integration-tests
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/run-mock-dbus-test.sh
             $<TARGET_FILE:linux-thermal-daemon>

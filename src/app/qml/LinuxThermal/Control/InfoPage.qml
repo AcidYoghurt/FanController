@@ -29,7 +29,6 @@ ScrollView {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignTop
                 secureBootState: root.backend.secureBootState
-                secureBootRequirement: root.backend.secureBootRequirement
                 secureBootKnown: root.backend.secureBootKnown
                 secureBootEnabled: root.backend.secureBootEnabled
                 secureBootDisabled: root.backend.secureBootDisabled

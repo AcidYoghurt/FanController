@@ -76,8 +76,10 @@ Thermal::BackendInfo HwmonBackend::info() const {
   return {QStringLiteral("hwmon"),
           QStringLiteral("Linux hwmon"),
           m_drivers.join(QStringLiteral(", ")),
-          m_sensors.isEmpty() && m_fans.isEmpty() ? QStringLiteral("unsupported")
-                                                  : QStringLiteral("ready"),
+          m_sensors.isEmpty() && m_fans.isEmpty()
+              ? QStringLiteral("unsupported")
+              : m_zones.isEmpty() ? QStringLiteral("read-only")
+                                  : QStringLiteral("ready"),
           QStringLiteral("Standard kernel hwmon/sysfs interface"),
           capabilities};
 }
@@ -256,10 +258,43 @@ bool HwmonBackend::probe() {
       }
     }
   }
+  m_topologySignature = topologySignature();
   return !m_sensors.isEmpty() || !m_fans.isEmpty();
 }
 
+QString HwmonBackend::topologySignature() const {
+  const QDir directory(QDir(m_sysfsRoot).filePath(QStringLiteral("class/hwmon")));
+  const auto entries = directory.entryInfoList(
+      {QStringLiteral("hwmon*")}, QDir::Dirs | QDir::NoDotAndDotDot,
+      QDir::Name);
+  QStringList signature;
+  signature.reserve(entries.size());
+  for (const auto &entry : entries) {
+    const auto base = entry.absoluteFilePath();
+    auto files = QDir(base).entryList(
+        {QStringLiteral("temp*_input"), QStringLiteral("temp*_label"),
+         QStringLiteral("fan*_input"), QStringLiteral("fan*_label"),
+         QStringLiteral("fan*_min"), QStringLiteral("fan*_max"),
+         QStringLiteral("fan*_manual"), QStringLiteral("fan*_output"),
+         QStringLiteral("fan*_target"), QStringLiteral("pwm[0-9]*"),
+         QStringLiteral("pwm*_enable")},
+        QDir::Files, QDir::Name);
+    const auto devicePath =
+        QFileInfo(base + QStringLiteral("/device")).canonicalFilePath();
+    signature.push_back(
+        QStringLiteral("%1|%2|%3|%4")
+            .arg(entry.fileName(), readText(base + QStringLiteral("/name")),
+                 devicePath, files.join(u',')));
+  }
+  return signature.join(u';');
+}
+
 void HwmonBackend::refresh() {
+  if (topologySignature() != m_topologySignature) {
+    const auto detected = probe();
+    Q_UNUSED(detected)
+    return;
+  }
   for (auto &sensor : m_sensors) {
     const auto raw = readInteger(m_sensorPaths.value(sensor.id));
     sensor.temperature = raw >= 0 ? raw / 1000.0 : -1.0;

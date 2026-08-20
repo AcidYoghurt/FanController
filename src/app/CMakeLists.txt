@@ -1,5 +1,7 @@
 qt_add_executable(linux-thermal-control
     main.cpp
+    SingleInstanceController.cpp
+    SingleInstanceController.h
     TrayController.cpp
     TrayController.h
 )
@@ -32,7 +34,6 @@ qt_add_qml_module(linux-thermal-control
         qml/LinuxThermal/Control/MetricOverview.qml
         qml/LinuxThermal/Control/ModePanel.qml
         qml/LinuxThermal/Control/FanPanel.qml
-        qml/LinuxThermal/Control/ModeConfirmDialog.qml
         qml/LinuxThermal/Control/OperationErrorDialog.qml
         qml/LinuxThermal/Control/CurveChart.qml
         qml/LinuxThermal/Control/CurveEditor.qml

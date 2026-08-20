@@ -139,6 +139,13 @@ bool ClevoBackend::validZone(const QString &zoneId) const {
   return !m_zones.isEmpty() && m_zones.constFirst().id == zoneId;
 }
 
+QByteArray ClevoBackend::normalizeAcpiResponse(QByteArray response) {
+  const auto terminator = response.indexOf('\0');
+  if (terminator >= 0)
+    response.truncate(terminator);
+  return response.trimmed();
+}
+
 Thermal::Result ClevoBackend::call(const QByteArray &command,
                                    const QByteArray &expected) const {
   QMutexLocker locker(&m_mutex);
@@ -150,7 +157,7 @@ Thermal::Result ClevoBackend::call(const QByteArray &command,
   file.close();
   if (!file.open(QIODevice::ReadOnly))
     return Thermal::Result::fail(QStringLiteral("clevo.read"), file.errorString());
-  const auto response = file.readAll().replace('\0', QByteArray()).trimmed();
+  const auto response = normalizeAcpiResponse(file.readAll());
   if (response != expected)
     return Thermal::Result::fail(
         QStringLiteral("clevo.response"),

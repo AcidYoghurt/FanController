@@ -5,6 +5,7 @@ target_sources(linux-thermal-common INTERFACE
     Constants.h
     DbusUtils.h
     ThermalTypes.h
+    TemperatureSensorSelector.h
 )
 
 target_include_directories(linux-thermal-common INTERFACE

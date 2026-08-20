@@ -5,6 +5,8 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include <algorithm>
+
 namespace {
 void writeFile(const QString &path, const QByteArray &value) {
   QFile file(path);
@@ -53,6 +55,38 @@ private slots:
     HwmonBackend backend(root.path());
     QVERIFY(backend.probe());
     QCOMPARE(static_cast<int>(backend.sensors().constFirst().kind), kind);
+  }
+
+  void discoversGpuThatAppearsAfterInitialProbe() {
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    const auto cpuPath = root.filePath(QStringLiteral("class/hwmon/hwmon0"));
+    QVERIFY(QDir().mkpath(cpuPath));
+    writeFile(cpuPath + QStringLiteral("/name"), "k10temp\n");
+    writeFile(cpuPath + QStringLiteral("/temp1_input"), "61000\n");
+    writeFile(cpuPath + QStringLiteral("/temp1_label"), "Tctl\n");
+
+    HwmonBackend backend(root.path());
+    QVERIFY(backend.probe());
+    QCOMPARE(backend.sensors().size(), 1);
+    QCOMPARE(backend.info().status, QStringLiteral("read-only"));
+
+    const auto gpuPath = root.filePath(QStringLiteral("class/hwmon/hwmon1"));
+    QVERIFY(QDir().mkpath(gpuPath));
+    writeFile(gpuPath + QStringLiteral("/name"), "amdgpu\n");
+    writeFile(gpuPath + QStringLiteral("/temp1_input"), "47000\n");
+    writeFile(gpuPath + QStringLiteral("/temp1_label"), "edge\n");
+
+    backend.refresh();
+    QCOMPARE(backend.sensors().size(), 2);
+    const auto gpu = std::find_if(
+        backend.sensors().cbegin(), backend.sensors().cend(),
+        [](const Thermal::TemperatureSensor &sensor) {
+          return sensor.kind == Thermal::DeviceKind::Gpu;
+        });
+    QVERIFY(gpu != backend.sensors().cend());
+    QCOMPARE(gpu->displayName, QStringLiteral("edge"));
+    QCOMPARE(gpu->temperature, 47.0);
   }
 
   void keepsMultipleControllersDistinct() {

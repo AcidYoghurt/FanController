@@ -42,6 +42,7 @@ private:
     int maximumRaw = 255;
   };
 
+  [[nodiscard]] QString topologySignature() const;
   [[nodiscard]] const Channel *channelForZone(const QString &zoneId) const;
   [[nodiscard]] Thermal::Result writeValue(const QString &path, int value,
                                            const QString &code) const;
@@ -53,4 +54,5 @@ private:
   QList<Channel> m_channels;
   QStringList m_drivers;
   QHash<QString, QString> m_sensorPaths;
+  QString m_topologySignature;
 };

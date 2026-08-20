@@ -2,6 +2,7 @@
 
 #include "Constants.h"
 #include "DbusUtils.h"
+#include "TemperatureSensorSelector.h"
 
 #include <QDBusConnection>
 #include <QDBusPendingCallWatcher>
@@ -353,13 +354,8 @@ void BackendClient::applyStatus(const QVariantMap &status) {
   const auto previousVersion = daemonVersion();
   const auto previousSystemName = systemName();
   m_status = status;
-  QVariantList primarySensors;
-  for (const auto &value : status.value(QStringLiteral("sensors")).toList()) {
-    const auto kind = value.toMap().value(QStringLiteral("deviceKind")).toString();
-    if (kind == QStringLiteral("cpu") || kind == QStringLiteral("gpu"))
-      primarySensors.push_back(value);
-  }
-  m_sensors.replace(primarySensors);
+  m_sensors.replace(LinuxThermal::TemperatureSensorSelector::selectPrimary(
+      status.value(QStringLiteral("sensors")).toList()));
   m_fans.replace(status.value(QStringLiteral("fans")).toList());
   m_zones.replace(status.value(QStringLiteral("zones")).toList());
   m_backends.replace(status.value(QStringLiteral("backends")).toList());

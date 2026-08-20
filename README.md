@@ -16,7 +16,7 @@
 - 区分“只读遥测”“部分可控”“可使用自定义曲线”，不会因为能读取温度就声称能控制风扇；
 - 每个风扇区域具有独立传感器、能力、安全约束和五点曲线；
 - 传感器失效、达到安全温度或控制失败时执行安全保护；
-- 图形界面以普通用户运行，写入硬件由 root systemd 服务完成，操作通过 Polkit 授权。
+- 图形界面以普通用户运行，写入硬件由 root systemd 服务完成；安装包通过 Polkit 预先授权当前活动的本地桌面会话，日常切换模式无需再次输入管理员密码。
 
 ## 三种模式
 
@@ -64,9 +64,9 @@ Linux Thermal Control  [Control] [Info]
 ```
 
 - `Control`（默认）：CPU/GPU 温度、运行模式、安全告警和自定义风扇曲线；
-- `Info`：安全启动状态与关闭建议、风扇与控制能力、检测到的控制后端。
+- `Info`：安全启动状态、风扇与控制能力、检测到的控制后端。
 
-安全启动状态直接读取 EFI `SecureBoot-*` 变量。标准 hwmon、NVML、ThinkPad 和 Apple SMC 后端通常不要求关闭安全启动；只有经过验证的 Clevo ACPI 机型在安全启动阻止 `acpi_call` 时，界面才提示关闭安全启动或注册 MOK 模块密钥。
+安全启动状态直接读取 EFI `SecureBoot-*` 变量；Info 页面只显示当前状态，不再显示是否需要关闭安全启动的判断与建议。
 
 ## 系统托盘与退出
 
@@ -83,6 +83,8 @@ Linux Thermal Control  [Control] [Info]
 
 如果当前桌面环境完全不支持系统托盘，为避免程序隐藏后无法恢复，关闭窗口会退回普通退出行为。
 
+GUI 在每个用户桌面会话中只允许一个实例。再次点击应用图标、Dock 中的“新建窗口”或重复执行 `linux-thermal-control` 时，不会创建第二个窗口，而是恢复并激活已经运行的窗口。
+
 ## Docker 开发
 
 开发环境固定为 Ubuntu 22.04 amd64、GCC 12、C++23 和 Qt 6.11.2。代理、时区、X11/XWayland、Wayland 与 `/dev/dri` 由脚本自动探测。
@@ -96,7 +98,7 @@ Linux Thermal Control  [Control] [Info]
 软件包输出：
 
 ```text
-dist/linux-thermal-control_0.5.3-1_amd64.deb
+dist/linux-thermal-control_0.5.10-1_amd64.deb
 ```
 
 `quick_start.sh` 不访问真实 EC、ACPI 或宿主机 hwmon 写入接口，可安全测试多传感器、多风扇、只读设备、三种模式和独立曲线。

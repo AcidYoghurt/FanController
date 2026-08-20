@@ -1,4 +1,5 @@
 #include "../src/daemon/FanController.h"
+#include "../src/daemon/backends/ClevoBackend.h"
 
 #include <QDir>
 #include <QFile>
@@ -27,6 +28,17 @@ private slots:
              QStringLiteral("full-speed"));
     QCOMPARE(FanController::modeToString(FanController::Mode::CustomCurve),
              QStringLiteral("custom-curve"));
+  }
+
+  void clevoAcpiResponseStopsAtFirstNull() {
+    QByteArray response("0x69\0alled", 10);
+    QCOMPARE(ClevoBackend::normalizeAcpiResponse(response),
+             QByteArray("0x69"));
+    QCOMPARE(ClevoBackend::normalizeAcpiResponse(QByteArray(" 0x68\n")),
+             QByteArray("0x68"));
+    QCOMPARE(ClevoBackend::normalizeAcpiResponse(
+                 QByteArray("Error: AE_BAD_PARAMETER\0garbage", 31)),
+             QByteArray("Error: AE_BAD_PARAMETER"));
   }
 
   void detectsSecureBootEfiVariable() {

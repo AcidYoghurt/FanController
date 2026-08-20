@@ -37,6 +37,11 @@ Panel {
                 required property string status
                 required property string detail
                 required property var capabilities
+                readonly property bool controllable:
+                    capabilities.automatic || capabilities.fullSpeed
+                    || capabilities.customCurve
+                readonly property bool telemetryOnly:
+                    capabilities.telemetry && !controllable
 
                 Layout.fillWidth: true
                 implicitHeight: backendContent.implicitHeight + 26
@@ -81,18 +86,18 @@ Panel {
                             implicitWidth: stateText.implicitWidth + 18
                             implicitHeight: 26
                             radius: 13
-                            color: Qt.alpha(backendRow.status === "ready" ? Theme.success
-                                            : backendRow.status === "read-only" ? Theme.warning
+                            color: Qt.alpha(backendRow.controllable ? Theme.success
+                                            : backendRow.telemetryOnly ? Theme.warning
                                             : Theme.subtle,
                                             Theme.dark ? 0.18 : 0.11)
                             Text {
                                 id: stateText
                                 anchors.centerIn: parent
-                                text: backendRow.status === "ready" ? qsTr("可控制")
-                                      : backendRow.status === "read-only" ? qsTr("只读")
+                                text: backendRow.controllable ? qsTr("可控制")
+                                      : backendRow.telemetryOnly ? qsTr("只读遥测")
                                       : qsTr("不可用")
-                                color: backendRow.status === "ready" ? Theme.success
-                                       : backendRow.status === "read-only" ? Theme.warning
+                                color: backendRow.controllable ? Theme.success
+                                       : backendRow.telemetryOnly ? Theme.warning
                                        : Theme.subtle
                                 font.pixelSize: 11
                                 font.weight: Font.DemiBold

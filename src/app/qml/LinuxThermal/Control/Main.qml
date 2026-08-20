@@ -12,9 +12,7 @@ ApplicationWindow {
     title: qsTr("Linux Thermal Control")
     color: Theme.window
 
-    property string requestedMode: ""
     property string displayedError: ""
-    property bool applyEditedCurve: false
     property int currentPage: 0
 
     header: AppHeader {
@@ -35,18 +33,12 @@ ApplicationWindow {
         backend: FanBackend
         currentPage: window.currentPage
         onModeRequested: mode => {
-            if (!FanBackend.canSetMode(mode))
-                return
-            window.applyEditedCurve = false
-            window.requestedMode = mode
-            confirmation.open()
+            if (FanBackend.canSetMode(mode))
+                FanBackend.setMode(mode)
         }
         onEditedCurveApplyRequested: {
-            if (!FanBackend.connected || FanBackend.busy || !FanBackend.curveSupported)
-                return
-            window.applyEditedCurve = true
-            window.requestedMode = "custom-curve"
-            confirmation.open()
+            if (FanBackend.connected && !FanBackend.busy && FanBackend.curveSupported)
+                FanBackend.applyCurve()
         }
     }
 
@@ -59,23 +51,6 @@ ApplicationWindow {
         sequences: [StandardKey.Refresh]
         enabled: !FanBackend.busy
         onActivated: FanBackend.refresh()
-    }
-
-    ModeConfirmDialog {
-        id: confirmation
-        anchors.centerIn: parent
-        requestedMode: window.requestedMode
-        requestStillValid: window.applyEditedCurve
-                           ? FanBackend.connected && !FanBackend.busy && FanBackend.curveSupported
-                           : FanBackend.canSetMode(window.requestedMode)
-        onModeConfirmed: mode => {
-            if (window.applyEditedCurve)
-                FanBackend.applyCurve()
-            else
-                FanBackend.setMode(mode)
-            window.applyEditedCurve = false
-        }
-        onClosed: window.applyEditedCurve = false
     }
 
     OperationErrorDialog {

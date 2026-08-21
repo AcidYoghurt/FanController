@@ -96,6 +96,7 @@ private:
   QHash<QString, QVariantList> m_curves;
   QHash<QString, int> m_curveRevisions;
   QHash<QString, double> m_controlTemperatures;
+  QHash<QString, QList<double>> m_temperatureSamples;
   QHash<QString, int> m_zoneDuties;
   QHash<QString, QElapsedTimer> m_lastDutyDecrease;
   QString m_curvePath;

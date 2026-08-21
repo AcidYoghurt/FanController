@@ -120,15 +120,28 @@ int main(int argc, char *argv[]) {
   if (parser.isSet(QStringLiteral("test-page-navigation"))) {
     QTimer::singleShot(300, &app, [window] {
       auto *stack = window->findChild<QObject *>(QStringLiteral("pageStack"));
+      auto *controlButton = window->findChild<QObject *>(
+          QStringLiteral("controlNavigationButton"));
+      auto *infoButton = window->findChild<QObject *>(
+          QStringLiteral("infoNavigationButton"));
       auto *currentItem = stack
                               ? qvariant_cast<QObject *>(
                                     stack->property("currentItem"))
                               : nullptr;
-      if (!stack || !currentItem ||
+      if (!stack || !currentItem || !controlButton || !infoButton ||
           window->property("currentPage").toInt() != 0 ||
+          !controlButton->property("selected").toBool() ||
+          infoButton->property("selected").toBool() ||
           stack->property("depth").toInt() != 1 ||
           currentItem->objectName() != QStringLiteral("controlPage")) {
         QCoreApplication::exit(6);
+        return;
+      }
+      QMetaObject::invokeMethod(controlButton, "click");
+      QMetaObject::invokeMethod(controlButton, "click");
+      if (!controlButton->property("selected").toBool() ||
+          window->property("currentPage").toInt() != 0) {
+        QCoreApplication::exit(15);
         return;
       }
       window->setProperty("currentPage", 1);
@@ -159,11 +172,21 @@ int main(int argc, char *argv[]) {
                               ? qvariant_cast<QObject *>(
                                     stack->property("currentItem"))
                               : nullptr;
-      if (!stack || !currentItem ||
+      auto *infoButton = window->findChild<QObject *>(
+          QStringLiteral("infoNavigationButton"));
+      if (!stack || !currentItem || !infoButton ||
           window->property("currentPage").toInt() != 1 ||
+          !infoButton->property("selected").toBool() ||
           stack->property("depth").toInt() != 2 ||
           currentItem->objectName() != QStringLiteral("infoPage")) {
         QCoreApplication::exit(7);
+        return;
+      }
+      QMetaObject::invokeMethod(infoButton, "click");
+      QMetaObject::invokeMethod(infoButton, "click");
+      if (!infoButton->property("selected").toBool() ||
+          window->property("currentPage").toInt() != 1) {
+        QCoreApplication::exit(16);
         return;
       }
       window->setProperty("currentPage", 0);

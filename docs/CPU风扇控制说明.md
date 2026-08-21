@@ -33,7 +33,7 @@ amdgpu、i915、nouveau、thinkpad、dell_smm、asus、nct6775 等
 ## 2. 安装与启动
 
 ```bash
-sudo apt install ./dist/linux-thermal-control_0.5.13-3_amd64.deb
+sudo apt install ./dist/linux-thermal-control_0.5.13-4_amd64.deb
 sudo systemctl enable --now linux-thermal-daemon.service
 systemctl status linux-thermal-daemon.service
 journalctl -u linux-thermal-daemon.service -b
@@ -225,7 +225,7 @@ sudo apt remove linux-thermal-control
 从 `0.5.6` 开始，安装脚本会自动执行 systemd manager reload、system D-Bus ReloadConfig，并启动 `linux-thermal-daemon.service`。正常情况下只安装 deb 即可：
 
 ```bash
-sudo apt install ./linux-thermal-control_0.5.13-3_amd64.deb
+sudo apt install ./linux-thermal-control_0.5.13-4_amd64.deb
 ```
 
 诊断命令：

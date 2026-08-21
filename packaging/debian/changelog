@@ -1,3 +1,17 @@
+linux-thermal-control (0.5.13-4) unstable; urgency=medium
+
+  * Read the real CPU package/Tctl sensor for Clevo fan control instead of
+    presenting the hottest individual core as the package temperature.
+  * Follow the lm-sensors fancontrol model with an eight-sample moving average
+    and output hysteresis, while preserving an immediate raw-temperature
+    100 percent safety response.
+  * Show the filtered control temperature on the custom-curve graph while
+    retaining the raw package reading in system telemetry.
+  * Keep navigation selection derived solely from the active page so repeated
+    clicks cannot toggle off the selected button color.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Fri, 21 Aug 2026 18:00:00 +0800
+
 linux-thermal-control (0.5.13-3) unstable; urgency=medium
 
   * Automatically detect Secure Boot during package configuration, reuse an
@@ -9,7 +23,6 @@ linux-thermal-control (0.5.13-3) unstable; urgency=medium
     print the explicit fallback only when enrollment cannot be queued.
   * Show the Ubuntu DKMS MOK registration state directly below Secure Boot on
     the Info page, including pending and not-yet-generated states.
-
  -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Fri, 21 Aug 2026 14:00:00 +0800
 
 linux-thermal-control (0.5.13-2) unstable; urgency=medium

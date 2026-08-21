@@ -23,13 +23,14 @@
 #include <QtMath>
 
 #include <algorithm>
+#include <numeric>
 
 namespace {
 constexpr int MinimumCurvePointCount = 2;
 constexpr int MaximumCurvePointCount = 32;
 constexpr int DutyDecreaseStep = 5;
-constexpr int DutyWriteThreshold = 3;
-constexpr double TemperatureSmoothingAlpha = 0.35;
+constexpr int DutyHysteresis = 5;
+constexpr int TemperatureAverageSampleCount = 8;
 constexpr qint64 DutyDecreaseIntervalMs = 5000;
 
 QVariantMap curvePoint(int temperature, int duty) {
@@ -296,6 +297,7 @@ bool FanController::applyModeToZones(Mode mode, QString *error) {
       // gradual 5%/5s cooldown path and leave the fan near 100% for a minute.
       m_zoneDuties[zone.id] = -1;
       m_controlTemperatures.remove(zone.id);
+      m_temperatureSamples.remove(zone.id);
       m_lastDutyDecrease.remove(zone.id);
       continue;
     } else {
@@ -463,26 +465,41 @@ bool FanController::applyCustomControl(QString *error) {
       continue;
     }
 
+    auto &temperatureSamples = m_temperatureSamples[zone.id];
+    if (temperatureSamples.isEmpty()) {
+      // Start with a complete baseline window. A mode switch must not give the
+      // first isolated reading disproportionate weight in the moving average.
+      temperatureSamples.fill(sensor->temperature,
+                              TemperatureAverageSampleCount);
+    } else {
+      temperatureSamples.push_back(sensor->temperature);
+    }
+    while (temperatureSamples.size() > TemperatureAverageSampleCount)
+      temperatureSamples.removeFirst();
+
     auto &controlTemperature = m_controlTemperatures[zone.id];
-    if (controlTemperature <= 0.0)
-      controlTemperature = sensor->temperature;
-    else
-      controlTemperature = TemperatureSmoothingAlpha * sensor->temperature +
-                           (1.0 - TemperatureSmoothingAlpha) * controlTemperature;
-    int targetDuty = sensor->temperature >= zone.safetyTemperature
+    controlTemperature = std::accumulate(temperatureSamples.cbegin(),
+                                         temperatureSamples.cend(), 0.0) /
+                         temperatureSamples.size();
+    const bool safetyTemperatureReached =
+        sensor->temperature >= zone.safetyTemperature;
+    int targetDuty = safetyTemperatureReached
                          ? 100
                          : dutyForTemperature(m_curves.value(zone.id),
                                               controlTemperature,
                                               zone.minimumDuty);
     const int currentDuty = m_zoneDuties.value(zone.id, -1);
     bool shouldWrite = currentDuty < 0 || targetDuty == 100 ||
-                       targetDuty - currentDuty >= DutyWriteThreshold;
+                       targetDuty - currentDuty >= DutyHysteresis;
     if (targetDuty < currentDuty) {
-      auto &timer = m_lastDutyDecrease[zone.id];
-      if (!timer.isValid() || timer.elapsed() >= DutyDecreaseIntervalMs) {
-        targetDuty = qMax(targetDuty, currentDuty - DutyDecreaseStep);
-        shouldWrite = true;
-        timer.restart();
+      shouldWrite = false;
+      if (currentDuty - targetDuty >= DutyHysteresis) {
+        auto &timer = m_lastDutyDecrease[zone.id];
+        if (!timer.isValid() || timer.elapsed() >= DutyDecreaseIntervalMs) {
+          targetDuty = qMax(targetDuty, currentDuty - DutyDecreaseStep);
+          shouldWrite = true;
+          timer.restart();
+        }
       }
     }
     if (shouldWrite) {
@@ -495,7 +512,7 @@ bool FanController::applyCustomControl(QString *error) {
       m_zoneDuties[zone.id] = targetDuty;
       m_lastDutyDecrease[zone.id].restart();
     }
-    anySafety |= sensor->temperature >= zone.safetyTemperature;
+    anySafety |= safetyTemperatureReached;
     anyApplied = true;
   }
   m_safetyOverride = anySafety;

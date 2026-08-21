@@ -19,6 +19,9 @@ public:
   [[nodiscard]] Thermal::Result setDuty(const QString &zoneId,
                                         int percent) override;
   [[nodiscard]] static QByteArray normalizeAcpiResponse(QByteArray response);
+  [[nodiscard]] static double
+  cpuPackageTemperature(const QString &hwmonRoot =
+                            QStringLiteral("/sys/class/hwmon"));
 
 private:
   [[nodiscard]] Thermal::Result call(const QByteArray &command,

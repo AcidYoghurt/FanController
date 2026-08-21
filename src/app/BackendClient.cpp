@@ -168,6 +168,17 @@ bool BackendClient::canSetMode(const QString &targetMode) const {
   return false;
 }
 double BackendClient::selectedTemperature() const {
+  if (mode() == QStringLiteral("custom-curve")) {
+    const auto zoneValues = m_status.value(QStringLiteral("zones")).toList();
+    for (const auto &value : zoneValues) {
+      const auto zone = value.toMap();
+      const double controlTemperature =
+          zone.value(QStringLiteral("controlTemperature"), -1.0).toDouble();
+      if (zone.value(QStringLiteral("zoneId")).toString() == m_selectedZoneId &&
+          controlTemperature >= 0.0)
+        return controlTemperature;
+    }
+  }
   const auto sensorId = selectedProfile().value(QStringLiteral("sensorId")).toString();
   const auto sensorValues = m_status.value(QStringLiteral("sensors")).toList();
   for (const auto &value : sensorValues) {

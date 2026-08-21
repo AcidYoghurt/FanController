@@ -52,6 +52,66 @@ private slots:
              QByteArray("Error: AE_BAD_PARAMETER"));
   }
 
+  void clevoPrefersPackageTemperatureOverHottestCore() {
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    const auto hwmon = root.filePath(QStringLiteral("hwmon0"));
+    QVERIFY(QDir().mkpath(hwmon));
+    const auto writeFile = [&hwmon](const QString &name,
+                                    const QByteArray &contents) {
+      QFile file(hwmon + u'/' + name);
+      return file.open(QIODevice::WriteOnly) &&
+             file.write(contents) == contents.size();
+    };
+    QVERIFY(writeFile(QStringLiteral("name"), "coretemp\n"));
+    QVERIFY(writeFile(QStringLiteral("temp1_label"), "Package id 0\n"));
+    QVERIFY(writeFile(QStringLiteral("temp1_input"), "60000\n"));
+    QVERIFY(writeFile(QStringLiteral("temp2_label"), "Core 0\n"));
+    QVERIFY(writeFile(QStringLiteral("temp2_input"), "73000\n"));
+
+    QCOMPARE(ClevoBackend::cpuPackageTemperature(root.path()), 60.0);
+  }
+
+  void clevoFallsBackToHottestTemperatureWithoutPackageLabel() {
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    const auto hwmon = root.filePath(QStringLiteral("hwmon0"));
+    QVERIFY(QDir().mkpath(hwmon));
+    const auto writeFile = [&hwmon](const QString &name,
+                                    const QByteArray &contents) {
+      QFile file(hwmon + u'/' + name);
+      return file.open(QIODevice::WriteOnly) &&
+             file.write(contents) == contents.size();
+    };
+    QVERIFY(writeFile(QStringLiteral("name"), "coretemp\n"));
+    QVERIFY(writeFile(QStringLiteral("temp1_label"), "Core 0\n"));
+    QVERIFY(writeFile(QStringLiteral("temp1_input"), "61000\n"));
+    QVERIFY(writeFile(QStringLiteral("temp2_label"), "Core 4\n"));
+    QVERIFY(writeFile(QStringLiteral("temp2_input"), "73000\n"));
+
+    QCOMPARE(ClevoBackend::cpuPackageTemperature(root.path()), 73.0);
+  }
+
+  void clevoPrefersAmdTctlForFanControl() {
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    const auto hwmon = root.filePath(QStringLiteral("hwmon0"));
+    QVERIFY(QDir().mkpath(hwmon));
+    const auto writeFile = [&hwmon](const QString &name,
+                                    const QByteArray &contents) {
+      QFile file(hwmon + u'/' + name);
+      return file.open(QIODevice::WriteOnly) &&
+             file.write(contents) == contents.size();
+    };
+    QVERIFY(writeFile(QStringLiteral("name"), "k10temp\n"));
+    QVERIFY(writeFile(QStringLiteral("temp1_label"), "Tctl\n"));
+    QVERIFY(writeFile(QStringLiteral("temp1_input"), "68000\n"));
+    QVERIFY(writeFile(QStringLiteral("temp2_label"), "Tdie\n"));
+    QVERIFY(writeFile(QStringLiteral("temp2_input"), "58000\n"));
+
+    QCOMPARE(ClevoBackend::cpuPackageTemperature(root.path()), 68.0);
+  }
+
   void detectsSecureBootEfiVariable() {
     QTemporaryDir root;
     QVERIFY(root.isValid());
@@ -257,6 +317,75 @@ private slots:
     QCOMPARE(controller.mode(), FanController::Mode::FullSpeed);
     controller.prepareForSleep(false);
     QCOMPARE(controller.mode(), FanController::Mode::FullSpeed);
+  }
+
+  void isolatedTemperatureSpikeDoesNotJumpFanDuty() {
+    FanController controller(true);
+    QString error;
+    QVERIFY2(controller.initialize(&error), qPrintable(error));
+    const QString sensorId = QStringLiteral("mock:cpu:package");
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 60.0));
+    QVERIFY2(controller.setMode(FanController::Mode::CustomCurve, &error),
+             qPrintable(error));
+
+    const auto currentDuty = [&controller] {
+      const auto zones = controller.status().value(QStringLiteral("zones")).toList();
+      for (const auto &value : zones) {
+        const auto zone = value.toMap();
+        if (zone.value(QStringLiteral("zoneId")).toString() ==
+            QStringLiteral("mock:cpu:zone")) {
+          return zone.value(QStringLiteral("currentDuty")).toInt();
+        }
+      }
+      return -1;
+    };
+
+    const int baselineDuty = currentDuty();
+    QVERIFY(baselineDuty >= 0);
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 73.0));
+    QCOMPARE(currentDuty(), baselineDuty);
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 60.0));
+    QCOMPARE(currentDuty(), baselineDuty);
+  }
+
+  void movingAverageRequiresSustainedRiseButSafetyIsImmediate() {
+    FanController controller(true);
+    QString error;
+    QVERIFY2(controller.initialize(&error), qPrintable(error));
+    const QString sensorId = QStringLiteral("mock:cpu:package");
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 60.0));
+    QVERIFY2(controller.setMode(FanController::Mode::CustomCurve, &error),
+             qPrintable(error));
+
+    const auto currentDuty = [&controller] {
+      const auto zones = controller.status().value(QStringLiteral("zones")).toList();
+      for (const auto &value : zones) {
+        const auto zone = value.toMap();
+        if (zone.value(QStringLiteral("zoneId")).toString() ==
+            QStringLiteral("mock:cpu:zone")) {
+          return zone.value(QStringLiteral("currentDuty")).toInt();
+        }
+      }
+      return -1;
+    };
+
+    int previousDuty = currentDuty();
+    for (int sample = 0; sample < 5; ++sample) {
+      QVERIFY(controller.setMockSensorTemperature(sensorId, 80.0));
+      const int nextDuty = currentDuty();
+      QVERIFY2(nextDuty <= previousDuty + 5,
+               qPrintable(QStringLiteral("Averaged duty jumped from %1% to %2%")
+                              .arg(previousDuty)
+                              .arg(nextDuty)));
+      previousDuty = nextDuty;
+    }
+    QVERIFY(previousDuty > 50);
+
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 85.0));
+    QCOMPARE(currentDuty(), 100);
+    QVERIFY(controller.status()
+                .value(QStringLiteral("safetyOverride"))
+                .toBool());
   }
 
   void persistsCurveAcrossRestart() {

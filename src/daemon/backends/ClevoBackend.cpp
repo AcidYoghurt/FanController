@@ -23,8 +23,18 @@ int readInteger(const QString &path, int fallback = -1) {
   return ok ? value : fallback;
 }
 
-double cpuTemperature() {
-  const QDir hwmon(QStringLiteral("/sys/class/hwmon"));
+int controlTemperaturePriority(const QString &label) {
+  if (label.startsWith(QStringLiteral("Package id"), Qt::CaseInsensitive) ||
+      label.compare(QStringLiteral("Tctl"), Qt::CaseInsensitive) == 0)
+    return 2;
+  if (label.compare(QStringLiteral("Tdie"), Qt::CaseInsensitive) == 0)
+    return 1;
+  return 0;
+}
+} // namespace
+
+double ClevoBackend::cpuPackageTemperature(const QString &hwmonRoot) {
+  const QDir hwmon(hwmonRoot);
   const auto entries = hwmon.entryInfoList({QStringLiteral("hwmon*")},
                                            QDir::Dirs | QDir::NoDotAndDotDot);
   for (const auto &entry : entries) {
@@ -35,14 +45,33 @@ double cpuTemperature() {
     const auto files = QDir(entry.filePath()).entryList(
         {QStringLiteral("temp*_input")}, QDir::Files, QDir::Name);
     double hottest = -1.0;
-    for (const auto &file : files)
-      hottest = qMax(hottest, readInteger(entry.filePath() + u'/' + file) / 1000.0);
+    double package = -1.0;
+    int packagePriority = 0;
+    for (const auto &file : files) {
+      const int millidegrees = readInteger(entry.filePath() + u'/' + file);
+      if (millidegrees < 0)
+        continue;
+      const double temperature = millidegrees / 1000.0;
+      hottest = qMax(hottest, temperature);
+      const auto labelFile =
+          file.first(file.size() - QStringLiteral("_input").size()) +
+          QStringLiteral("_label");
+      const int priority = controlTemperaturePriority(
+          readText(entry.filePath() + u'/' + labelFile));
+      if (priority > packagePriority) {
+        package = temperature;
+        packagePriority = priority;
+      } else if (priority > 0 && priority == packagePriority) {
+        package = qMax(package, temperature);
+      }
+    }
+    if (package >= 0.0)
+      return package;
     if (hottest >= 0.0)
       return hottest;
   }
   return -1.0;
 }
-} // namespace
 
 ClevoBackend::ClevoBackend() = default;
 
@@ -84,7 +113,7 @@ bool ClevoBackend::probe() {
   const QString sensorId = controllerId + QStringLiteral(":cpu-package");
   m_sensors.push_back({sensorId, QStringLiteral("clevo-clv0001"), controllerId,
                        QStringLiteral("CPU package"), Thermal::DeviceKind::Cpu,
-                       cpuTemperature(), true});
+                       cpuPackageTemperature(), true});
   QStringList fanIds;
   for (int index = 0; index < 4; ++index) {
     const auto id = QStringLiteral("%1:fan%2").arg(controllerId).arg(index);
@@ -118,7 +147,7 @@ bool ClevoBackend::probe() {
 
 void ClevoBackend::refresh() {
   if (!m_sensors.isEmpty()) {
-    const auto temperature = cpuTemperature();
+    const auto temperature = cpuPackageTemperature();
     m_sensors[0].temperature = temperature;
     m_sensors[0].available = temperature >= 0;
   }

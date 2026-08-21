@@ -1,6 +1,6 @@
 #include "Constants.h"
-#include "FanController.h"
-#include "FanService.h"
+#include "control/FanController.h"
+#include "service/FanService.h"
 
 #include <QCommandLineParser>
 #include <QCoreApplication>

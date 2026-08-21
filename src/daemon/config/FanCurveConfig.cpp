@@ -47,7 +47,9 @@ QString FanCurveConfig::editableConfigPath() {
   const auto installedPath =
       QStringLiteral("/etc/linux-thermal-control/default-fan-curve.yaml");
   const auto installedBackup =
-      QFileInfo(installedPath).dir().filePath(QStringLiteral(".风扇曲线配置.backup"));
+      QFileInfo(installedPath)
+          .dir()
+          .filePath(QStringLiteral(".default-fan-curve.yaml.backup"));
   if (QFileInfo::exists(installedPath) || QFileInfo::exists(installedBackup))
     return installedPath;
 
@@ -61,7 +63,7 @@ QString FanCurveConfig::editableConfigPath() {
 QString FanCurveConfig::backupConfigPath() {
   return QFileInfo(editableConfigPath())
       .dir()
-      .filePath(QStringLiteral(".风扇曲线配置.backup"));
+      .filePath(QStringLiteral(".default-fan-curve.yaml.backup"));
 }
 
 bool FanCurveConfig::ensureDefaultBackup(QString *error) {

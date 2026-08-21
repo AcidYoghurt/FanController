@@ -1,7 +1,7 @@
 #include "FanController.h"
 
 #include "Constants.h"
-#include "FanCurveConfig.h"
+#include "config/FanCurveConfig.h"
 #include "backends/ClevoBackend.h"
 #include "backends/HwmonBackend.h"
 #include "backends/IdeaPadBackend.h"
@@ -382,7 +382,7 @@ bool FanController::resetCurveForZone(const QString &zoneId, QString *error) {
   const auto curve = defaultCurveForZone(zone);
   if (curve.isEmpty()) {
     if (error)
-      *error = QStringLiteral("Unable to load .风扇曲线配置.backup.");
+      *error = QStringLiteral("Unable to load .default-fan-curve.yaml.backup.");
     return false;
   }
   return setCurveForZone(zoneId, curve, error);

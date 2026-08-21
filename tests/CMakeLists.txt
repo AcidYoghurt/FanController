@@ -1,8 +1,8 @@
 set(THERMAL_BACKEND_SOURCES
-    ${PROJECT_SOURCE_DIR}/src/daemon/FanController.cpp
-    ${PROJECT_SOURCE_DIR}/src/daemon/FanController.h
-    ${PROJECT_SOURCE_DIR}/src/daemon/FanCurveConfig.cpp
-    ${PROJECT_SOURCE_DIR}/src/daemon/FanCurveConfig.h
+    ${PROJECT_SOURCE_DIR}/src/daemon/control/FanController.cpp
+    ${PROJECT_SOURCE_DIR}/src/daemon/control/FanController.h
+    ${PROJECT_SOURCE_DIR}/src/daemon/config/FanCurveConfig.cpp
+    ${PROJECT_SOURCE_DIR}/src/daemon/config/FanCurveConfig.h
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/IFanBackend.h
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/HwmonBackend.cpp
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/HwmonBackend.h
@@ -21,13 +21,12 @@ set(THERMAL_BACKEND_SOURCES
 )
 
 qt_add_executable(linux-thermal-tests
-    FanControllerTest.cpp
+    daemon/FanControllerTest.cpp
     ${THERMAL_BACKEND_SOURCES}
 )
 
 target_include_directories(linux-thermal-tests PRIVATE
     ${PROJECT_SOURCE_DIR}/src/daemon
-    ${PROJECT_SOURCE_DIR}/src/daemon/backends
 )
 
 target_link_libraries(linux-thermal-tests PRIVATE
@@ -43,7 +42,7 @@ target_compile_definitions(linux-thermal-tests PRIVATE
 )
 
 qt_add_executable(temperature-sensor-selector-tests
-    TemperatureSensorSelectorTest.cpp
+    common/TemperatureSensorSelectorTest.cpp
 )
 
 target_link_libraries(temperature-sensor-selector-tests PRIVATE
@@ -58,14 +57,14 @@ target_compile_definitions(temperature-sensor-selector-tests PRIVATE
 )
 
 qt_add_executable(hwmon-backend-tests
-    HwmonBackendTest.cpp
+    daemon/HwmonBackendTest.cpp
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/HwmonBackend.cpp
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/HwmonBackend.h
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/IFanBackend.h
 )
 
 target_include_directories(hwmon-backend-tests PRIVATE
-    ${PROJECT_SOURCE_DIR}/src/daemon/backends
+    ${PROJECT_SOURCE_DIR}/src/daemon
 )
 
 target_link_libraries(hwmon-backend-tests PRIVATE
@@ -81,7 +80,7 @@ target_compile_definitions(hwmon-backend-tests PRIVATE
 
 
 qt_add_executable(platform-backend-tests
-    PlatformBackendTest.cpp
+    daemon/PlatformBackendTest.cpp
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/ThermalZoneBackend.cpp
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/ThermalZoneBackend.h
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/ThinkPadBackend.cpp
@@ -92,7 +91,7 @@ qt_add_executable(platform-backend-tests
 )
 
 target_include_directories(platform-backend-tests PRIVATE
-    ${PROJECT_SOURCE_DIR}/src/daemon/backends
+    ${PROJECT_SOURCE_DIR}/src/daemon
 )
 
 target_link_libraries(platform-backend-tests PRIVATE
@@ -108,7 +107,7 @@ target_compile_definitions(platform-backend-tests PRIVATE
 
 
 add_library(fake-nvml SHARED
-    FakeNvml.cpp
+    daemon/FakeNvml.cpp
 )
 set_target_properties(fake-nvml PROPERTIES
     OUTPUT_NAME nvidia-ml
@@ -116,14 +115,14 @@ set_target_properties(fake-nvml PROPERTIES
 )
 
 qt_add_executable(nvidia-backend-tests
-    NvidiaBackendTest.cpp
+    daemon/NvidiaBackendTest.cpp
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/NvidiaBackend.cpp
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/NvidiaBackend.h
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/IFanBackend.h
 )
 
 target_include_directories(nvidia-backend-tests PRIVATE
-    ${PROJECT_SOURCE_DIR}/src/daemon/backends
+    ${PROJECT_SOURCE_DIR}/src/daemon
 )
 
 target_link_libraries(nvidia-backend-tests PRIVATE
@@ -139,9 +138,9 @@ target_compile_definitions(nvidia-backend-tests PRIVATE
 
 
 qt_add_executable(tray-controller-tests
-    TrayControllerTest.cpp
-    ${PROJECT_SOURCE_DIR}/src/app/TrayController.cpp
-    ${PROJECT_SOURCE_DIR}/src/app/TrayController.h
+    app/TrayControllerTest.cpp
+    ${PROJECT_SOURCE_DIR}/src/app/platform/TrayController.cpp
+    ${PROJECT_SOURCE_DIR}/src/app/platform/TrayController.h
 )
 
 target_include_directories(tray-controller-tests PRIVATE
@@ -161,7 +160,7 @@ target_compile_definitions(tray-controller-tests PRIVATE
 )
 
 qt_add_executable(linux-thermal-dbus-tests
-    MockDbusIntegrationTest.cpp
+    integration/MockDbusIntegrationTest.cpp
 )
 
 target_link_libraries(linux-thermal-dbus-tests PRIVATE
@@ -189,16 +188,16 @@ set_tests_properties(nvidia-backend-unit-tests PROPERTIES
     ENVIRONMENT "THERMAL_CONTROL_NVML_LIBRARY=$<TARGET_FILE:fake-nvml>"
 )
 add_test(NAME packaging-maintainer-scripts-tests
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/PackagingScriptsTest.sh
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/packaging/PackagingScriptsTest.sh
 )
 
 add_test(NAME linux-thermal-single-instance-tests
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/run-single-instance-test.sh
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/run-single-instance-test.sh
             $<TARGET_FILE:linux-thermal-control>
 )
 
 add_test(NAME linux-thermal-dbus-integration-tests
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/run-mock-dbus-test.sh
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/run-mock-dbus-test.sh
             $<TARGET_FILE:linux-thermal-daemon>
             $<TARGET_FILE:linux-thermal-dbus-tests>
 )

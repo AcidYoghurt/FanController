@@ -1,9 +1,9 @@
 qt_add_executable(linux-thermal-control
     main.cpp
-    SingleInstanceController.cpp
-    SingleInstanceController.h
-    TrayController.cpp
-    TrayController.h
+    platform/SingleInstanceController.cpp
+    platform/SingleInstanceController.h
+    platform/TrayController.cpp
+    platform/TrayController.h
 )
 
 set_source_files_properties(qml/LinuxThermal/Control/Theme.qml PROPERTIES
@@ -14,36 +14,38 @@ qt_add_qml_module(linux-thermal-control
     URI LinuxThermal.Control
     VERSION 1.0
     SOURCES
-        BackendClient.cpp
-        BackendClient.h
-        InventoryModels.cpp
-        InventoryModels.h
+        client/BackendClient.cpp
+        client/BackendClient.h
+        models/InventoryModels.cpp
+        models/InventoryModels.h
     QML_FILES
         qml/LinuxThermal/Control/Main.qml
         qml/LinuxThermal/Control/Theme.qml
-        qml/LinuxThermal/Control/Panel.qml
-        qml/LinuxThermal/Control/MetricCard.qml
-        qml/LinuxThermal/Control/ModeButton.qml
-        qml/LinuxThermal/Control/AppHeader.qml
-        qml/LinuxThermal/Control/AppFooter.qml
-        qml/LinuxThermal/Control/Dashboard.qml
-        qml/LinuxThermal/Control/ControlPage.qml
-        qml/LinuxThermal/Control/InfoPage.qml
-        qml/LinuxThermal/Control/HeaderNavigation.qml
-        qml/LinuxThermal/Control/SecureBootPanel.qml
-        qml/LinuxThermal/Control/MetricOverview.qml
-        qml/LinuxThermal/Control/ModePanel.qml
-        qml/LinuxThermal/Control/FanPanel.qml
-        qml/LinuxThermal/Control/OperationErrorDialog.qml
-        qml/LinuxThermal/Control/CurveChart.qml
-        qml/LinuxThermal/Control/CurveEditor.qml
-        qml/LinuxThermal/Control/SafetyBanner.qml
-        qml/LinuxThermal/Control/CapabilityBanner.qml
-        qml/LinuxThermal/Control/BackendPanel.qml
+        qml/LinuxThermal/Control/pages/ControlPage.qml
+        qml/LinuxThermal/Control/pages/Dashboard.qml
+        qml/LinuxThermal/Control/pages/InfoPage.qml
+        qml/LinuxThermal/Control/components/AppFooter.qml
+        qml/LinuxThermal/Control/components/AppHeader.qml
+        qml/LinuxThermal/Control/components/CapabilityBanner.qml
+        qml/LinuxThermal/Control/components/CurveChart.qml
+        qml/LinuxThermal/Control/components/HeaderNavigation.qml
+        qml/LinuxThermal/Control/components/MetricCard.qml
+        qml/LinuxThermal/Control/components/ModeButton.qml
+        qml/LinuxThermal/Control/components/Panel.qml
+        qml/LinuxThermal/Control/components/SafetyBanner.qml
+        qml/LinuxThermal/Control/panels/BackendPanel.qml
+        qml/LinuxThermal/Control/panels/CurveEditor.qml
+        qml/LinuxThermal/Control/panels/FanPanel.qml
+        qml/LinuxThermal/Control/panels/MetricOverview.qml
+        qml/LinuxThermal/Control/panels/ModePanel.qml
+        qml/LinuxThermal/Control/panels/SecureBootPanel.qml
+        qml/LinuxThermal/Control/dialogs/OperationErrorDialog.qml
 )
 
 target_include_directories(linux-thermal-control PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/client
+    ${CMAKE_CURRENT_SOURCE_DIR}/models
 )
 
 target_link_libraries(linux-thermal-control PRIVATE

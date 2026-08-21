@@ -1,6 +1,6 @@
 #pragma once
 
-#include "InventoryModels.h"
+#include "models/InventoryModels.h"
 
 #include <QDBusInterface>
 #include <QDBusPendingCall>

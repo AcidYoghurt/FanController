@@ -113,7 +113,7 @@ gdbus call --system \
 
 自定义曲线建议通过 GUI 编辑，因为 GUI 会应用区域最低占空比、点顺序和安全端点限制。
 
-默认曲线由 `/etc/linux-thermal-control/default-fan-curve.yaml` 描述。安装或首次启动时，如果配置目录中不存在 `.风扇曲线配置.backup`，程序会从 YAML 创建备份；“恢复默认”读取该备份。如果备份已经存在，则不会覆盖它。项目源码中的对应文件位于 `config/default-fan-curve.yaml`。
+默认曲线由 `/etc/linux-thermal-control/default-fan-curve.yaml` 描述。安装或首次启动时，如果配置目录中不存在 `.default-fan-curve.yaml.backup`，程序会从 YAML 创建备份；“恢复默认”读取该备份。如果备份已经存在，则不会覆盖它。项目源码中的对应文件位于 `config/default-fan-curve.yaml`。
 
 ## 5. NVIDIA、AMD 与 Intel GPU
 
@@ -184,7 +184,7 @@ sudo /usr/libexec/linux-thermal-control/linux-thermal-recovery automatic
 开发树中还提供实机曲线闭环压力测试。它通过正式 D-Bus `ApplyZoneCurve` 接口依次发送默认曲线各区间的中点占空比，再通过 `GetStatus` 接收并校验模式、平滑占空比与 CPU/GPU 两路真实 RPM。测试会保存原曲线与模式，在退出、失败或中断时恢复：
 
 ```bash
-sudo ./tests/HardwareCurveStressTest.sh --yes 4
+sudo ./tests/integration/HardwareCurveStressTest.sh --yes 4
 ```
 
 该脚本仅允许在 DMI 与 `CLV0001/DCHU` 同时匹配的 `COLORFUL P16 TA 24` 上运行。`85–90°C` 和 `90–100°C` 两段在正常曲线控制中会被 85°C 安全全速覆盖；阶梯测试直接验证 EC 仍能接受它们对应的占空比。

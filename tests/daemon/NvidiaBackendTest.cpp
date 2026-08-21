@@ -1,4 +1,4 @@
-#include "../src/daemon/backends/NvidiaBackend.h"
+#include "backends/NvidiaBackend.h"
 
 #include <QLibrary>
 #include <QTest>

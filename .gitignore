@@ -55,4 +55,4 @@ core.*
 Thumbs.db
 
 # Runtime snapshot used by “恢复默认”
-/config/.风扇曲线配置.backup
+/config/.default-fan-curve.yaml.backup

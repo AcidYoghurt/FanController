@@ -2,7 +2,7 @@
 
 #include "Constants.h"
 #include "DbusUtils.h"
-#include "FanController.h"
+#include "control/FanController.h"
 
 #include <QDBusError>
 #include <QDBusMessage>

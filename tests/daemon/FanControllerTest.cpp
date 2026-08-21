@@ -1,6 +1,6 @@
-#include "../src/daemon/FanController.h"
-#include "../src/daemon/FanCurveConfig.h"
-#include "../src/daemon/backends/ClevoBackend.h"
+#include "backends/ClevoBackend.h"
+#include "config/FanCurveConfig.h"
+#include "control/FanController.h"
 
 #include <QDir>
 #include <QFile>
@@ -277,7 +277,7 @@ private slots:
 
     qputenv("LINUX_THERMAL_DEFAULT_CURVE_CONFIG", configPath.toUtf8());
     const auto backupPath =
-        directory.filePath(QStringLiteral(".风扇曲线配置.backup"));
+        directory.filePath(QStringLiteral(".default-fan-curve.yaml.backup"));
     QVERIFY(!QFileInfo::exists(backupPath));
     QString error;
     const auto first = FanCurveConfig::loadDefault(&error);

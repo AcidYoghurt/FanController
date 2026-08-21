@@ -1,10 +1,10 @@
 qt_add_executable(linux-thermal-daemon
-    FanController.cpp
-    FanController.h
-    FanCurveConfig.cpp
-    FanCurveConfig.h
-    FanService.cpp
-    FanService.h
+    control/FanController.cpp
+    control/FanController.h
+    config/FanCurveConfig.cpp
+    config/FanCurveConfig.h
+    service/FanService.cpp
+    service/FanService.h
     backends/IFanBackend.h
     backends/HwmonBackend.cpp
     backends/HwmonBackend.h
@@ -25,7 +25,6 @@ qt_add_executable(linux-thermal-daemon
 
 target_include_directories(linux-thermal-daemon PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/backends
 )
 
 target_link_libraries(linux-thermal-daemon PRIVATE

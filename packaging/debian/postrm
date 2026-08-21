@@ -2,7 +2,8 @@
 set -e
 
 service=linux-thermal-daemon.service
-curve_backup=/etc/linux-thermal-control/.风扇曲线配置.backup
+curve_backup=/etc/linux-thermal-control/.default-fan-curve.yaml.backup
+legacy_curve_backup=/etc/linux-thermal-control/.风扇曲线配置.backup
 
 reload_dbus_config() {
   if command -v dbus-send >/dev/null 2>&1 && [ -S /run/dbus/system_bus_socket ]; then
@@ -16,7 +17,7 @@ if [ "$1" = purge ]; then
   if command -v deb-systemd-helper >/dev/null 2>&1; then
     deb-systemd-helper purge "$service" >/dev/null 2>&1 || true
   fi
-  rm -f "$curve_backup"
+  rm -f "$curve_backup" "$legacy_curve_backup"
 fi
 
 if [ -d /run/systemd/system ]; then

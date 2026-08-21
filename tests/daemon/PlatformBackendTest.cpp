@@ -1,6 +1,6 @@
-#include "../src/daemon/backends/ThermalZoneBackend.h"
-#include "../src/daemon/backends/ThinkPadBackend.h"
-#include "../src/daemon/backends/IdeaPadBackend.h"
+#include "backends/IdeaPadBackend.h"
+#include "backends/ThermalZoneBackend.h"
+#include "backends/ThinkPadBackend.h"
 
 #include <QDir>
 #include <QFile>

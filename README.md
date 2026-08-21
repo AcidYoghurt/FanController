@@ -40,7 +40,7 @@ config/default-fan-curve.yaml
 /etc/linux-thermal-control/default-fan-curve.yaml
 ```
 
-首次启动或安装时，如果同一目录中不存在隐藏文件 `.风扇曲线配置.backup`，程序会复制 YAML 配置创建该备份；如果备份已经存在，“恢复默认”始终读取备份，不会因后续编辑 YAML 或升级软件包而改变原默认值。需要重新建立默认值时，可先停止服务、删除备份，再重新启动服务。
+首次启动或安装时，如果同一目录中不存在隐藏文件 `.default-fan-curve.yaml.backup`，程序会复制 YAML 配置创建该备份；如果备份已经存在，“恢复默认”始终读取备份，不会因后续编辑 YAML 或升级软件包而改变原默认值。需要重新建立默认值时，可先停止服务、删除备份，再重新启动服务。
 
 YAML 中保存图片对应的十个节点：`35/0`、`40/30`、`45/40`、`50/45`、`60/50`、`65/60`、`70/70`、`80/80`、`90/90`、`100/100`。不支持停转的硬件会自动将低占空比节点提高到该区域允许的最低值，区域安全温度仍会提前触发 100% 全速保护。
 
@@ -49,12 +49,14 @@ YAML 中保存图片对应的十个节点：`35/0`、`40/30`、`45/40`、`50/45`
 ```text
 src/
 ├── app/
-│   ├── BackendClient.*       # D-Bus 客户端与界面状态
-│   ├── InventoryModels.*     # 类型化 QAbstractListModel
-│   └── qml/                  # Qt Quick 界面
+│   ├── client/               # D-Bus 客户端与界面状态
+│   ├── models/               # 类型化 QAbstractListModel
+│   ├── platform/             # 单实例与系统托盘集成
+│   └── qml/                  # 按页面、组件、面板和对话框组织的 Qt Quick 界面
 ├── daemon/
-│   ├── FanController.*       # 后端聚合、模式与安全策略
-│   ├── FanService.*          # D-Bus/Polkit API
+│   ├── control/              # 后端聚合、模式与安全策略
+│   ├── config/               # 默认曲线解析与备份
+│   ├── service/              # D-Bus/Polkit API
 │   └── backends/
 │       ├── IFanBackend.h
 │       ├── HwmonBackend.*

@@ -1,7 +1,7 @@
-#include "BackendClient.h"
+#include "client/BackendClient.h"
 #include "Constants.h"
-#include "SingleInstanceController.h"
-#include "TrayController.h"
+#include "platform/SingleInstanceController.h"
+#include "platform/TrayController.h"
 
 #include <QApplication>
 #include <QCommandLineParser>

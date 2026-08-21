@@ -9,7 +9,7 @@ readonly expected_vendor=COLORFUL
 readonly expected_product='P16 TA 24'
 
 usage() {
-  echo '用法：sudo ./tests/HardwareCurveStressTest.sh --yes [每档反馈秒数，默认 4]' >&2
+  echo '用法：sudo ./tests/integration/HardwareCurveStressTest.sh --yes [每档反馈秒数，默认 4]' >&2
 }
 
 if (( EUID != 0 )); then

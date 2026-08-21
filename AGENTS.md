@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-`src/app/` contains the Qt Quick GUI, QML components, tray integration, and the D-Bus client. `src/daemon/` contains the privileged service, control policy, curve persistence, and hardware backends under `src/daemon/backends/`. Shared types and constants live in `src/common/`. Tests are in `tests/`; packaging assets and maintainer scripts are in `packaging/`. Default curves belong in `config/`, helper programs in `tools/`, and contributor documentation in `docs/`. Treat `build/` and `dist/` as generated output.
+`src/app/` contains the Qt Quick GUI, with C++ code grouped under `client/`, `models/`, and `platform/`. QML files follow the `LinuxThermal.Control` URI and are grouped by responsibility. `src/daemon/` contains `control/`, `config/`, `service/`, and hardware `backends/`. Shared types and constants live in `src/common/`. Tests mirror these responsibilities under `tests/`; packaging assets and maintainer scripts are in `packaging/`. Treat `build/` and `dist/` as generated output.
 
 ## Build, Test, and Development Commands
 

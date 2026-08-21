@@ -1,4 +1,4 @@
-#include "../src/app/TrayController.h"
+#include "platform/TrayController.h"
 
 #include <QApplication>
 #include <QCloseEvent>

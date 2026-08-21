@@ -1,4 +1,4 @@
-#include "../src/daemon/backends/HwmonBackend.h"
+#include "backends/HwmonBackend.h"
 
 #include <QDir>
 #include <QFile>

@@ -100,6 +100,10 @@ restore_original_state() {
 }
 trap restore_original_state EXIT INT TERM
 
+# Start the staged test from firmware control so the first 40% curve entry has
+# no stale software-duty state. The EXIT trap restores the user's real mode.
+expect_true_reply "SetMode(automatic)" "$(dbus_call SetMode automatic)"
+
 # 每项对应默认曲线相邻节点的中点输出。每次都通过 ApplyZoneCurve 发送，
 # 再通过 GetStatus 接收 mode/currentDuty/RPM，形成完整的应用层闭环。
 readonly -a segment_names=(
@@ -114,7 +118,7 @@ previous_average=-1
 flat_stages=0
 plateau_end=$((safety_temperature - 1))
 
-printf 'segment,requested_duty,reported_duty,fan1_rpm,fan2_rpm,fan3_rpm,fan4_rpm,average_rpm\n'
+printf 'segment,requested_duty,reported_duty,cpu_fan_rpm,gpu_fan_rpm,average_rpm\n'
 for index in "${!requested_duties[@]}"; do
   requested_duty="${requested_duties[index]}"
   if (( requested_duty < minimum_duty )); then
@@ -124,15 +128,24 @@ for index in "${!requested_duties[@]}"; do
 
   reply="$(dbus_call ApplyZoneCurve "${zone_id}" "${curve}")"
   expect_true_reply "ApplyZoneCurve(${requested_duty}%)" "${reply}"
-  sleep "${settle_seconds}"
-
   feedback="$(dbus_call GetStatus)"
+  reported_duty="$(grep -oE "'currentDuty': <[-0-9]+>" <<<"${feedback}" | head -n 1 | grep -oE '[-0-9]+')"
+  for ((second = 0; second < settle_seconds; ++second)); do
+    sleep 1
+    feedback="$(dbus_call GetStatus)"
+    reported_duty="$(grep -oE "'currentDuty': <[-0-9]+>" <<<"${feedback}" | head -n 1 | grep -oE '[-0-9]+')"
+    if [[ -n "${reported_duty}" ]] &&
+       (( reported_duty >= requested_duty - 3 && reported_duty <= requested_duty + 3 )); then
+      break
+    fi
+  done
+
   [[ "${feedback}" == *"'mode': <'custom-curve'>"* ]] || {
     echo "${segment_names[index]}：回读模式不是 custom-curve。" >&2
     exit 6
   }
-  reported_duty="$(grep -oE "'currentDuty': <[-0-9]+>" <<<"${feedback}" | head -n 1 | grep -oE '[-0-9]+')"
-  if [[ "${reported_duty}" != "${requested_duty}" ]]; then
+  if [[ -z "${reported_duty}" ]] ||
+     (( reported_duty < requested_duty - 3 || reported_duty > requested_duty + 3 )); then
     echo "${segment_names[index]}：发送 ${requested_duty}%，回读 ${reported_duty:-N/A}%。" >&2
     exit 6
   fi
@@ -141,13 +154,13 @@ for index in "${!requested_duties[@]}"; do
     grep -oE "'rpm': <[-0-9]+>" <<<"${feedback}" |
       grep -oE '[-0-9]+'
   )
-  if (( ${#rpms[@]} < 4 )); then
-    echo "${segment_names[index]}：GetStatus 未返回四路风扇 RPM。" >&2
+  if (( ${#rpms[@]} < 2 )); then
+    echo "${segment_names[index]}：GetStatus 未返回两路物理风扇 RPM。" >&2
     exit 6
   fi
   sum=0
   count=0
-  for rpm in "${rpms[@]:0:4}"; do
+  for rpm in "${rpms[@]:0:2}"; do
     if (( rpm >= 0 )); then
       sum=$((sum + rpm))
       count=$((count + 1))
@@ -158,9 +171,9 @@ for index in "${!requested_duties[@]}"; do
     exit 6
   fi
   average=$((sum / count))
-  printf '%s,%s,%s,%s,%s,%s,%s,%s\n' \
+  printf '%s,%s,%s,%s,%s,%s\n' \
     "${segment_names[index]}" "${requested_duty}" "${reported_duty}" \
-    "${rpms[0]}" "${rpms[1]}" "${rpms[2]}" "${rpms[3]}" "${average}"
+    "${rpms[0]}" "${rpms[1]}" "${average}"
 
   if (( first_average < 0 )); then
     first_average="${average}"
@@ -177,7 +190,7 @@ if (( last_average < first_average + 200 )); then
   exit 7
 fi
 
-echo "闭环通过：10 次 ApplyZoneCurve 均收到确认，GetStatus 占空比全部匹配，平均转速提升 $((last_average - first_average)) RPM。"
+echo "闭环通过：10 次 ApplyZoneCurve 均收到确认，GetStatus 占空比均进入迟滞容差，平均转速提升 $((last_average - first_average)) RPM。"
 if (( flat_stages > 0 )); then
   echo "提示：${flat_stages} 个相邻阶段的平均 RPM 变化不超过 25 RPM，EC 可能存在量化或反馈延迟。"
 fi

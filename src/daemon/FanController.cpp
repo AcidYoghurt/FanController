@@ -28,10 +28,14 @@
 namespace {
 constexpr int MinimumCurvePointCount = 2;
 constexpr int MaximumCurvePointCount = 32;
-constexpr int DutyDecreaseStep = 5;
-constexpr int DutyHysteresis = 5;
+constexpr int DutySlewStep = 2;
+constexpr int DutyHysteresis = 4;
 constexpr int TemperatureAverageSampleCount = 8;
-constexpr qint64 DutyDecreaseIntervalMs = 5000;
+// The telemetry timer runs every 1000 ms. Leave scheduling tolerance so a
+// callback that arrives a few milliseconds early does not halve the slew rate.
+constexpr qint64 DutySlewIntervalMs = 900;
+constexpr qint64 DutyDecreaseDelayMs = 5000;
+constexpr int EmergencyTemperatureMargin = 5;
 
 QVariantMap curvePoint(int temperature, int duty) {
   return {{QStringLiteral("temperature"), temperature},
@@ -264,6 +268,8 @@ bool FanController::setMode(Mode mode, QString *error) {
       *error = QStringLiteral("Unknown thermal-control mode.");
     return false;
   }
+  if (mode == m_mode)
+    return true;
   if (!applyModeToZones(mode, error))
     return false;
   m_mode = mode;
@@ -298,6 +304,7 @@ bool FanController::applyModeToZones(Mode mode, QString *error) {
       m_zoneDuties[zone.id] = -1;
       m_controlTemperatures.remove(zone.id);
       m_temperatureSamples.remove(zone.id);
+      m_lastDutyWrite.remove(zone.id);
       m_lastDutyDecrease.remove(zone.id);
       continue;
     } else {
@@ -481,38 +488,65 @@ bool FanController::applyCustomControl(QString *error) {
     controlTemperature = std::accumulate(temperatureSamples.cbegin(),
                                          temperatureSamples.cend(), 0.0) /
                          temperatureSamples.size();
-    const bool safetyTemperatureReached =
-        sensor->temperature >= zone.safetyTemperature;
-    int targetDuty = safetyTemperatureReached
-                         ? 100
-                         : dutyForTemperature(m_curves.value(zone.id),
-                                              controlTemperature,
-                                              zone.minimumDuty);
+    const bool curveSafetyTemperatureReached =
+        controlTemperature >= zone.safetyTemperature;
+    const double emergencyTemperature =
+        qMax(static_cast<double>(zone.safetyTemperature),
+             static_cast<double>(zone.maximumTemperature -
+                                 EmergencyTemperatureMargin));
+    const bool emergencyTemperatureReached =
+        sensor->temperature >= emergencyTemperature;
+    const int requestedDuty =
+        curveSafetyTemperatureReached || emergencyTemperatureReached
+            ? 100
+            : dutyForTemperature(m_curves.value(zone.id), controlTemperature,
+                                 zone.minimumDuty);
     const int currentDuty = m_zoneDuties.value(zone.id, -1);
-    bool shouldWrite = currentDuty < 0 || targetDuty == 100 ||
-                       targetDuty - currentDuty >= DutyHysteresis;
-    if (targetDuty < currentDuty) {
+    int commandDuty = requestedDuty;
+    bool shouldWrite = currentDuty < 0;
+    auto &writeTimer = m_lastDutyWrite[zone.id];
+    auto &decreaseTimer = m_lastDutyDecrease[zone.id];
+    if (currentDuty >= 0) {
       shouldWrite = false;
-      if (currentDuty - targetDuty >= DutyHysteresis) {
-        auto &timer = m_lastDutyDecrease[zone.id];
-        if (!timer.isValid() || timer.elapsed() >= DutyDecreaseIntervalMs) {
-          targetDuty = qMax(targetDuty, currentDuty - DutyDecreaseStep);
+      if (emergencyTemperatureReached) {
+        commandDuty = 100;
+        shouldWrite = currentDuty != commandDuty;
+        decreaseTimer.restart();
+      } else if (requestedDuty >= currentDuty + DutyHysteresis) {
+        if (!writeTimer.isValid() ||
+            writeTimer.elapsed() >= DutySlewIntervalMs) {
+          commandDuty = qMin(requestedDuty, currentDuty + DutySlewStep);
           shouldWrite = true;
-          timer.restart();
         }
+        decreaseTimer.restart();
+      } else if (requestedDuty <= currentDuty - DutyHysteresis) {
+        if (!decreaseTimer.isValid()) {
+          decreaseTimer.start();
+        } else if (decreaseTimer.elapsed() >= DutyDecreaseDelayMs &&
+                   (!writeTimer.isValid() ||
+                    writeTimer.elapsed() >= DutySlewIntervalMs)) {
+          commandDuty = qMax(requestedDuty, currentDuty - DutySlewStep);
+          shouldWrite = true;
+        }
+      } else {
+        // Restart the cooldown while demand is stable. A future decrease must
+        // remain requested for the complete delay before the first down-step.
+        decreaseTimer.restart();
       }
     }
     if (shouldWrite) {
-      const auto result = backend->setDuty(zone.id, targetDuty);
+      const auto result = backend->setDuty(zone.id, commandDuty);
       if (!result.success) {
         if (error)
           *error = result.message;
         return false;
       }
-      m_zoneDuties[zone.id] = targetDuty;
-      m_lastDutyDecrease[zone.id].restart();
+      m_zoneDuties[zone.id] = commandDuty;
+      writeTimer.restart();
+      if (currentDuty < 0)
+        decreaseTimer.restart();
     }
-    anySafety |= safetyTemperatureReached;
+    anySafety |= emergencyTemperatureReached;
     anyApplied = true;
   }
   m_safetyOverride = anySafety;

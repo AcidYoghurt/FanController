@@ -7,7 +7,7 @@ readonly build_dir="${project_root}/build/docker-release"
 readonly stage_dir="${project_root}/build/package-root"
 readonly dist_dir="${project_root}/dist"
 readonly package_name="linux-thermal-control"
-readonly package_version="0.5.13-4"
+readonly package_version="0.5.13-5"
 readonly package_file="${dist_dir}/${package_name}_${package_version}_amd64.deb"
 
 cd "${project_root}"

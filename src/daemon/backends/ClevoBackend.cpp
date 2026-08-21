@@ -9,6 +9,8 @@
 #include <QProcess>
 #include <QtMath>
 
+#include <utility>
+
 namespace {
 QString readText(const QString &path) {
   QFile file(path);
@@ -73,6 +75,52 @@ double ClevoBackend::cpuPackageTemperature(const QString &hwmonRoot) {
   return -1.0;
 }
 
+QList<Thermal::FanDevice>
+ClevoBackend::verifiedFanDevices(const QString &acpiRoot) {
+  const QString controllerId = QStringLiteral("clevo:CLV0001");
+  QList<Thermal::FanDevice> fans;
+  // COLORFUL P16 TA 24 has two physical blowers. The firmware also exposes
+  // TFN3 (permanently 0 RPM) and TFN4 (a duplicate of TFN2); neither is an
+  // additional fan and advertising them creates false failure telemetry.
+  for (int index = 0; index < 2; ++index) {
+    const auto id = QStringLiteral("%1:fan%2").arg(controllerId).arg(index);
+    const auto rpm = readInteger(
+        QStringLiteral("%1/INTC10A2:0%2/fan_speed_rpm")
+            .arg(acpiRoot)
+            .arg(index));
+    fans.push_back({id,
+                    QStringLiteral("clevo-clv0001"),
+                    controllerId,
+                    controllerId,
+                    index == 0 ? QStringLiteral("CPU fan")
+                               : QStringLiteral("GPU fan"),
+                    index == 0 ? Thermal::DeviceKind::Cpu
+                               : Thermal::DeviceKind::Gpu,
+                    rpm,
+                    -1,
+                    rpm >= 0,
+                    true,
+                    true,
+                    true,
+                    true,
+                    rpm == 0,
+                    true,
+                    QStringLiteral("controllable")});
+  }
+  return fans;
+}
+
+quint32 ClevoBackend::packedDutyPayload(int percent) {
+  percent = qBound(40, percent, 100);
+  const auto raw = static_cast<quint32>(
+      qRound(static_cast<double>(percent) * 255.0 / 100.0));
+  // WMBB method 0x68 accepts one duty byte per EC fan slot. Using
+  // 0xffffffXX drives the other slots at 100%, which made the GPU blower jump
+  // between its curve speed and full speed. Mirror the requested duty to all
+  // slots; TFN3 is unused and TFN4 aliases the second physical blower.
+  return raw * 0x01010101u;
+}
+
 ClevoBackend::ClevoBackend() = default;
 
 Thermal::BackendInfo ClevoBackend::info() const {
@@ -114,21 +162,10 @@ bool ClevoBackend::probe() {
   m_sensors.push_back({sensorId, QStringLiteral("clevo-clv0001"), controllerId,
                        QStringLiteral("CPU package"), Thermal::DeviceKind::Cpu,
                        cpuPackageTemperature(), true});
+  m_fans = verifiedFanDevices();
   QStringList fanIds;
-  for (int index = 0; index < 4; ++index) {
-    const auto id = QStringLiteral("%1:fan%2").arg(controllerId).arg(index);
-    fanIds.push_back(id);
-    const auto rpm = readInteger(
-        QStringLiteral("/sys/bus/acpi/devices/INTC10A2:0%1/fan_speed_rpm").arg(index));
-    m_fans.push_back({id, QStringLiteral("clevo-clv0001"), controllerId,
-                      controllerId,
-                      index == 0 ? QStringLiteral("CPU fan")
-                                 : QStringLiteral("System fan %1").arg(index + 1),
-                      index == 0 ? Thermal::DeviceKind::Cpu
-                                 : Thermal::DeviceKind::System,
-                      rpm, -1, rpm >= 0, true, true, true, index == 0,
-                      rpm == 0, true, QStringLiteral("controllable")});
-  }
+  for (const auto &fan : std::as_const(m_fans))
+    fanIds.push_back(fan.id);
   Thermal::FanZone zone;
   zone.id = controllerId + QStringLiteral(":cooling-zone");
   zone.backendId = QStringLiteral("clevo-clv0001");
@@ -214,8 +251,7 @@ Thermal::Result ClevoBackend::setDuty(const QString &zoneId, int percent) {
   if (!validZone(zoneId))
     return Thermal::Result::fail(QStringLiteral("zone.unknown"), QStringLiteral("Unknown fan zone."));
   percent = qBound(40, percent, 100);
-  const auto raw = qRound(percent * 255.0 / 100.0);
-  const auto payload = 0xffffff00u | static_cast<quint32>(raw);
+  const auto payload = packedDutyPayload(percent);
   const auto payloadText = QByteArrayLiteral("0x") +
                            QByteArray::number(payload, 16).rightJustified(8, '0');
   auto result = call(QByteArray(LinuxThermal::Constants::AcpiMethod) +
@@ -223,7 +259,10 @@ Thermal::Result ClevoBackend::setDuty(const QString &zoneId, int percent) {
                      "0x68");
   if (!result.success)
     return result;
+  const auto autoMaskText =
+      QByteArrayLiteral("0x") +
+      QByteArray::number(unusedFanAutoMask(), 16).rightJustified(8, '0');
   return call(QByteArray(LinuxThermal::Constants::AcpiMethod) +
-                  " 0x0 0x69 0x0000000e",
+                  " 0x0 0x69 " + autoMaskText,
               "0x69");
 }

@@ -33,7 +33,7 @@ amdgpu、i915、nouveau、thinkpad、dell_smm、asus、nct6775 等
 ## 2. 安装与启动
 
 ```bash
-sudo apt install ./dist/linux-thermal-control_0.5.13-4_amd64.deb
+sudo apt install ./dist/linux-thermal-control_0.5.13-5_amd64.deb
 sudo systemctl enable --now linux-thermal-daemon.service
 systemctl status linux-thermal-daemon.service
 journalctl -u linux-thermal-daemon.service -b
@@ -181,7 +181,7 @@ sudo /usr/libexec/linux-thermal-control/linux-thermal-recovery automatic
 
 不要在其他机型执行该工具。
 
-开发树中还提供实机曲线闭环压力测试。它通过正式 D-Bus `ApplyZoneCurve` 接口依次发送默认曲线各区间的中点占空比，再通过 `GetStatus` 接收并校验模式、占空比与四路真实 RPM。测试会保存原曲线与模式，在退出、失败或中断时恢复：
+开发树中还提供实机曲线闭环压力测试。它通过正式 D-Bus `ApplyZoneCurve` 接口依次发送默认曲线各区间的中点占空比，再通过 `GetStatus` 接收并校验模式、平滑占空比与 CPU/GPU 两路真实 RPM。测试会保存原曲线与模式，在退出、失败或中断时恢复：
 
 ```bash
 sudo ./tests/HardwareCurveStressTest.sh --yes 4
@@ -225,7 +225,7 @@ sudo apt remove linux-thermal-control
 从 `0.5.6` 开始，安装脚本会自动执行 systemd manager reload、system D-Bus ReloadConfig，并启动 `linux-thermal-daemon.service`。正常情况下只安装 deb 即可：
 
 ```bash
-sudo apt install ./linux-thermal-control_0.5.13-4_amd64.deb
+sudo apt install ./linux-thermal-control_0.5.13-5_amd64.deb
 ```
 
 诊断命令：

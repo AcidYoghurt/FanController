@@ -52,6 +52,13 @@ private slots:
              QByteArray("Error: AE_BAD_PARAMETER"));
   }
 
+  void clevoPacksDutyForEveryEcFanSlot() {
+    QCOMPARE(ClevoBackend::packedDutyPayload(40), quint32(0x66666666));
+    QCOMPARE(ClevoBackend::packedDutyPayload(50), quint32(0x80808080));
+    QCOMPARE(ClevoBackend::packedDutyPayload(100), quint32(0xffffffff));
+    QCOMPARE(ClevoBackend::unusedFanAutoMask(), quint32(0x0000000c));
+  }
+
   void clevoPrefersPackageTemperatureOverHottestCore() {
     QTemporaryDir root;
     QVERIFY(root.isValid());
@@ -110,6 +117,36 @@ private slots:
     QVERIFY(writeFile(QStringLiteral("temp2_input"), "58000\n"));
 
     QCOMPARE(ClevoBackend::cpuPackageTemperature(root.path()), 68.0);
+  }
+
+  void clevoPublishesOnlyTheTwoPhysicalFans() {
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    const auto writeRpm = [&root](int index, int rpm) {
+      const auto directory =
+          root.filePath(QStringLiteral("INTC10A2:0%1").arg(index));
+      if (!QDir().mkpath(directory))
+        return false;
+      QFile file(directory + QStringLiteral("/fan_speed_rpm"));
+      const auto contents = QByteArray::number(rpm) + '\n';
+      return file.open(QIODevice::WriteOnly) &&
+             file.write(contents) == contents.size();
+    };
+    QVERIFY(writeRpm(0, 3100));
+    QVERIFY(writeRpm(1, 2050));
+    QVERIFY(writeRpm(2, 0));
+    QVERIFY(writeRpm(3, 2050));
+
+    const auto fans = ClevoBackend::verifiedFanDevices(root.path());
+    QCOMPARE(fans.size(), 2);
+    QCOMPARE(fans.at(0).displayName, QStringLiteral("CPU fan"));
+    QCOMPARE(fans.at(0).rpm, 3100);
+    QCOMPARE(fans.at(0).kind, Thermal::DeviceKind::Cpu);
+    QCOMPARE(fans.at(1).displayName, QStringLiteral("GPU fan"));
+    QCOMPARE(fans.at(1).rpm, 2050);
+    QCOMPARE(fans.at(1).kind, Thermal::DeviceKind::Gpu);
+    QVERIFY(fans.at(0).curveSupported);
+    QVERIFY(fans.at(1).curveSupported);
   }
 
   void detectsSecureBootEfiVariable() {
@@ -348,7 +385,7 @@ private slots:
     QCOMPARE(currentDuty(), baselineDuty);
   }
 
-  void movingAverageRequiresSustainedRiseButSafetyIsImmediate() {
+  void movingAverageRequiresSustainedRiseButEmergencyIsImmediate() {
     FanController controller(true);
     QString error;
     QVERIFY2(controller.initialize(&error), qPrintable(error));
@@ -371,9 +408,10 @@ private slots:
 
     int previousDuty = currentDuty();
     for (int sample = 0; sample < 5; ++sample) {
+      QTest::qWait(1050);
       QVERIFY(controller.setMockSensorTemperature(sensorId, 80.0));
       const int nextDuty = currentDuty();
-      QVERIFY2(nextDuty <= previousDuty + 5,
+      QVERIFY2(nextDuty <= previousDuty + 2,
                qPrintable(QStringLiteral("Averaged duty jumped from %1% to %2%")
                               .arg(previousDuty)
                               .arg(nextDuty)));
@@ -381,11 +419,76 @@ private slots:
     }
     QVERIFY(previousDuty > 50);
 
-    QVERIFY(controller.setMockSensorTemperature(sensorId, 85.0));
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 95.0));
     QCOMPARE(currentDuty(), 100);
     QVERIFY(controller.status()
                 .value(QStringLiteral("safetyOverride"))
                 .toBool());
+  }
+
+  void isolatedCurveSafetySpikeDoesNotForceFullSpeed() {
+    FanController controller(true);
+    QString error;
+    QVERIFY2(controller.initialize(&error), qPrintable(error));
+    const QString sensorId = QStringLiteral("mock:cpu:package");
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 60.0));
+    QVERIFY2(controller.setMode(FanController::Mode::CustomCurve, &error),
+             qPrintable(error));
+    const int baseline = controller.status()
+                             .value(QStringLiteral("zones"))
+                             .toList()
+                             .constFirst()
+                             .toMap()
+                             .value(QStringLiteral("currentDuty"))
+                             .toInt();
+
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 89.0));
+    QCOMPARE(controller.status()
+                 .value(QStringLiteral("zones"))
+                 .toList()
+                 .constFirst()
+                 .toMap()
+                 .value(QStringLiteral("currentDuty"))
+                 .toInt(),
+             baseline);
+    QVERIFY(!controller.status()
+                 .value(QStringLiteral("safetyOverride"))
+                 .toBool());
+  }
+
+  void customCurveChangesAreSlewRateLimited() {
+    FanController controller(true);
+    QString error;
+    QVERIFY2(controller.initialize(&error), qPrintable(error));
+    const QString sensorId = QStringLiteral("mock:cpu:package");
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 60.0));
+    QVERIFY2(controller.setMode(FanController::Mode::CustomCurve, &error),
+             qPrintable(error));
+
+    const auto currentDuty = [&controller] {
+      const auto zones = controller.status().value(QStringLiteral("zones")).toList();
+      return zones.constFirst()
+          .toMap()
+          .value(QStringLiteral("currentDuty"))
+          .toInt();
+    };
+    const int baseline = currentDuty();
+    const QVariantList highCurve{
+        testCurvePoint(30, 80), testCurvePoint(84, 80),
+        testCurvePoint(85, 100)};
+    QVERIFY2(controller.setCurveForZone(QStringLiteral("mock:cpu:zone"),
+                                        highCurve, &error),
+             qPrintable(error));
+    QCOMPARE(currentDuty(), baseline);
+
+    int previousDuty = currentDuty();
+    for (int sample = 0; sample < 4; ++sample) {
+      QTest::qWait(1050);
+      QVERIFY(controller.setMockSensorTemperature(sensorId, 60.0));
+      const int nextDuty = currentDuty();
+      QCOMPARE(nextDuty, previousDuty + 2);
+      previousDuty = nextDuty;
+    }
   }
 
   void persistsCurveAcrossRestart() {
@@ -514,7 +617,10 @@ private slots:
       }
     }
 
-    QVERIFY(controller.setMockSensorTemperature(sensorId, 85.0));
+    // The curve safety point is handled by the normal slew limiter. Only a
+    // temperature within 5 C of the hardware maximum is an immediate
+    // emergency override.
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 95.0));
     const auto status = controller.status();
     QVERIFY(status.value(QStringLiteral("safetyOverride")).toBool());
     const auto zones = status.value(QStringLiteral("zones")).toList();

@@ -129,7 +129,27 @@ private slots:
       QVERIFY2(applyReply.isValid(), qPrintable(applyReply.error().message()));
       QVERIFY(applyReply.value());
 
-      const auto feedback = status();
+      QVariantMap feedback;
+      int reportedDuty = -1;
+      for (int attempt = 0; attempt < 12; ++attempt) {
+        feedback = status();
+        const auto feedbackZones =
+            feedback.value(QStringLiteral("zones")).toList();
+        const auto feedbackZone = std::find_if(
+            feedbackZones.cbegin(), feedbackZones.cend(),
+            [&zoneId](const auto &value) {
+              return value.toMap()
+                         .value(QStringLiteral("zoneId"))
+                         .toString() == zoneId;
+            });
+        if (feedbackZone != feedbackZones.cend())
+          reportedDuty = feedbackZone->toMap()
+                             .value(QStringLiteral("currentDuty"))
+                             .toInt();
+        if (qAbs(reportedDuty - requestedDuty) <= 3)
+          break;
+        QTest::qWait(1050);
+      }
       QCOMPARE(feedback.value(QStringLiteral("mode")).toString(),
                QStringLiteral("custom-curve"));
       const auto zones = feedback.value(QStringLiteral("zones")).toList();
@@ -146,12 +166,16 @@ private slots:
           });
       QVERIFY(zone != zones.cend());
       QVERIFY(fan != fans.cend());
+      QVERIFY2(qAbs(reportedDuty - requestedDuty) <= 3,
+               qPrintable(QStringLiteral("Requested %1%, reported %2%")
+                              .arg(requestedDuty)
+                              .arg(reportedDuty)));
       QCOMPARE(zone->toMap().value(QStringLiteral("currentDuty")).toInt(),
-               requestedDuty);
+               reportedDuty);
       QCOMPARE(fan->toMap().value(QStringLiteral("duty")).toInt(),
-               requestedDuty);
+               reportedDuty);
       QCOMPARE(fan->toMap().value(QStringLiteral("rpm")).toInt(),
-               700 + requestedDuty * 44);
+               700 + reportedDuty * 44);
     }
 
     const QDBusReply<bool> restoreCurveReply =

@@ -117,14 +117,14 @@ GUI 在每个用户桌面会话中只允许一个实例。再次点击应用图�
 软件包输出：
 
 ```text
-dist/linux-thermal-control_0.5.13-4_amd64.deb
+dist/linux-thermal-control_0.5.13-5_amd64.deb
 ```
 
 安装本地 deb 时应使用 APT，让它解析并安装 `acpi-call-dkms`、`mokutil`、
 `shim-signed` 等强制依赖：
 
 ```bash
-sudo apt install ./dist/linux-thermal-control_0.5.13-4_amd64.deb
+sudo apt install ./dist/linux-thermal-control_0.5.13-5_amd64.deb
 ```
 
 安装脚本会自动检查 Secure Boot、生成 Ubuntu DKMS MOK、签名模块并在需要

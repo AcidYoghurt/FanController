@@ -98,6 +98,7 @@ private:
   QHash<QString, double> m_controlTemperatures;
   QHash<QString, QList<double>> m_temperatureSamples;
   QHash<QString, int> m_zoneDuties;
+  QHash<QString, QElapsedTimer> m_lastDutyWrite;
   QHash<QString, QElapsedTimer> m_lastDutyDecrease;
   QString m_curvePath;
   Mode m_mode = Mode::Automatic;

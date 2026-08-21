@@ -1,3 +1,22 @@
+linux-thermal-control (0.5.13-5) unstable; urgency=medium
+
+  * Model the verified COLORFUL P16 TA 24 as its physical dual-fan layout:
+    TFN1 is the CPU fan and TFN2 is the GPU fan. Do not expose the permanently
+    zero TFN3 placeholder or the duplicate TFN4 tachometer as extra fans.
+  * Slew ordinary custom-curve duty changes by at most two percentage points
+    per telemetry cycle. Use the averaged 85 degree curve threshold normally,
+    and reserve an immediate override for raw temperatures within five degrees
+    of the hardware maximum.
+  * Display the same eight-second control average used by the custom curve on
+    the main CPU temperature card instead of the jumping raw DTS sample.
+  * Pack the requested Clevo duty into all four WMBB fan bytes. The old
+    0xffffffXX payload accidentally commanded non-CPU fan slots to full speed
+    and caused the GPU blower to surge under custom-curve control.
+  * Keep physical channels 1 and 2 in manual duty mode with auto mask 0x0c.
+    The old 0x0e mask immediately returned the GPU fan to firmware control.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Fri, 21 Aug 2026 19:00:00 +0800
+
 linux-thermal-control (0.5.13-4) unstable; urgency=medium
 
   * Read the real CPU package/Tctl sensor for Clevo fan control instead of

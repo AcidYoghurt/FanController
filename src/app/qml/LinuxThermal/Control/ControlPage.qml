@@ -42,6 +42,9 @@ ScrollView {
             Layout.leftMargin: Theme.pageMargin
             Layout.rightMargin: Theme.pageMargin
             sensorModel: root.backend.sensors
+            cpuControlTemperature: root.backend.mode === "custom-curve"
+                                   && !root.backend.safetyOverride
+                                   ? root.backend.selectedTemperature : -1
         }
 
         ModePanel {

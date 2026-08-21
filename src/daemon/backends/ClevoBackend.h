@@ -22,6 +22,13 @@ public:
   [[nodiscard]] static double
   cpuPackageTemperature(const QString &hwmonRoot =
                             QStringLiteral("/sys/class/hwmon"));
+  [[nodiscard]] static QList<Thermal::FanDevice>
+  verifiedFanDevices(const QString &acpiRoot =
+                         QStringLiteral("/sys/bus/acpi/devices"));
+  [[nodiscard]] static quint32 packedDutyPayload(int percent);
+  [[nodiscard]] static constexpr quint32 unusedFanAutoMask() {
+    return 0x0000000cu;
+  }
 
 private:
   [[nodiscard]] Thermal::Result call(const QByteArray &command,

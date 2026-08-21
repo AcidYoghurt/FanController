@@ -5,6 +5,7 @@ import QtQuick.Layouts
 GridLayout {
     id: root
     required property var sensorModel
+    property real cpuControlTemperature: -1
     columns: width >= 900 ? 3 : width >= 560 ? 2 : 1
     columnSpacing: 14
     rowSpacing: 14
@@ -16,15 +17,20 @@ GridLayout {
             required property string deviceKind
             required property real temperature
             required property bool available
+            readonly property real shownTemperature:
+                deviceKind === "cpu" && root.cpuControlTemperature >= 0
+                ? root.cpuControlTemperature : temperature
             visible: deviceKind === "cpu" || deviceKind === "gpu"
             Layout.fillWidth: true
             title: deviceKind === "cpu" ? qsTr("CPU 温度") : qsTr("GPU 温度")
-            value: available ? Number(temperature).toLocaleString(Qt.locale(), "f", 1) : "--"
+            value: available ? Number(shownTemperature).toLocaleString(Qt.locale(), "f", 1) : "--"
             suffix: "°C"
-            caption: displayName
+            caption: deviceKind === "cpu" && root.cpuControlTemperature >= 0
+                     ? qsTr("%1 · 8 秒控制平均值").arg(displayName)
+                     : displayName
             accent: !available ? Theme.subtle
-                    : temperature >= 85 ? Theme.danger
-                    : temperature >= 70 ? Theme.warning : Theme.cool
+                    : shownTemperature >= 85 ? Theme.danger
+                    : shownTemperature >= 70 ? Theme.warning : Theme.cool
         }
     }
 

@@ -1,3 +1,16 @@
+linux-thermal-control (0.5.13-6) unstable; urgency=medium
+
+  * Restore firmware automatic fan control synchronously before the explicit
+    system-tray Quit action terminates the GUI. Cancel the exit if the daemon
+    does not confirm the restore, so manual control is never left behind.
+  * Extend the staged-package tray lifecycle test to enter custom-curve mode
+    first and assert that tray exit returns the daemon to automatic mode.
+  * Commit editable curve SpinBox text live and expose each point's real
+    neighbour-constrained range, so typed and step-button values are exactly
+    the values retained by Save instead of being silently replaced later.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Fri, 21 Aug 2026 20:30:00 +0800
+
 linux-thermal-control (0.5.13-5) unstable; urgency=medium
 
   * Model the verified COLORFUL P16 TA 24 as its physical dual-fan layout:

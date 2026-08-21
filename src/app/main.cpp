@@ -1,3 +1,4 @@
+#include "BackendClient.h"
 #include "Constants.h"
 #include "SingleInstanceController.h"
 #include "TrayController.h"
@@ -71,6 +72,10 @@ int main(int argc, char *argv[]) {
   if (!window)
     return -1;
   trayController.setWindow(window);
+  auto *backend = engine.singletonInstance<BackendClient *>(
+      QStringLiteral("LinuxThermal.Control"), QStringLiteral("FanBackend"));
+  trayController.setQuitPreparation(
+      [backend] { return backend && backend->restoreAutomaticForExit(); });
   QObject::connect(&singleInstance,
                    &SingleInstanceController::activationRequested,
                    &trayController, &TrayController::showWindow);

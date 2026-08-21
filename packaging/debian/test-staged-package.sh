@@ -83,6 +83,10 @@ if [[ -s /tmp/linux-thermal-package-pages.err ]]; then
   exit 1
 fi
 
+dbus-send --system --print-reply --dest=org.linuxthermal.Control1 \
+  /org/linuxthermal/Control1 org.linuxthermal.Control1.SetMode \
+  string:custom-curve | grep -q 'boolean true'
+
 LINUX_THERMAL_FORCE_TRAY_FOR_TESTS=1 QT_QPA_PLATFORM=xcb \
   QT_QUICK_BACKEND=software xvfb-run -a "${gui}" \
   --test-tray-lifecycle \
@@ -90,6 +94,14 @@ LINUX_THERMAL_FORCE_TRAY_FOR_TESTS=1 QT_QPA_PLATFORM=xcb \
   2>/tmp/linux-thermal-package-tray.err
 if [[ -s /tmp/linux-thermal-package-tray.err ]]; then
   cat /tmp/linux-thermal-package-tray.err >&2
+  exit 1
+fi
+tray_exit_status="$(dbus-send --system --print-reply \
+  --dest=org.linuxthermal.Control1 /org/linuxthermal/Control1 \
+  org.linuxthermal.Control1.GetStatus)"
+if ! grep -A1 'string "mode"' <<<"${tray_exit_status}" | \
+     grep -q 'string "automatic"'; then
+  echo 'tray exit did not restore automatic fan mode' >&2
   exit 1
 fi
 

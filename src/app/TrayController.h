@@ -2,6 +2,7 @@
 
 #include <QIcon>
 #include <QObject>
+#include <functional>
 
 class QAction;
 class QApplication;
@@ -20,6 +21,7 @@ public:
   ~TrayController() override;
 
   void setWindow(QWindow *window);
+  void setQuitPreparation(std::function<bool()> preparation);
   [[nodiscard]] bool trayAvailable() const noexcept { return m_trayAvailable; }
   [[nodiscard]] bool quitRequested() const noexcept { return m_quitRequested; }
 
@@ -43,4 +45,5 @@ private:
   QAction *m_quitAction;
   bool m_trayAvailable = false;
   bool m_quitRequested = false;
+  std::function<bool()> m_quitPreparation;
 };

@@ -8,6 +8,8 @@
 #include <QSystemTrayIcon>
 #include <QWindow>
 
+#include <utility>
+
 TrayController::TrayController(QApplication *application, QIcon icon,
                                bool forceAvailableForTests, QObject *parent)
     : QObject(parent), m_application(application),
@@ -63,6 +65,10 @@ void TrayController::setWindow(QWindow *window) {
   updateActions();
 }
 
+void TrayController::setQuitPreparation(std::function<bool()> preparation) {
+  m_quitPreparation = std::move(preparation);
+}
+
 void TrayController::showWindow() {
   if (!m_window)
     return;
@@ -82,7 +88,15 @@ void TrayController::hideWindow() {
 }
 
 void TrayController::quitApplication() {
+  if (m_quitRequested)
+    return;
   m_quitRequested = true;
+  m_quitAction->setEnabled(false);
+  if (m_quitPreparation && !m_quitPreparation()) {
+    m_quitRequested = false;
+    m_quitAction->setEnabled(true);
+    return;
+  }
   m_trayIcon->hide();
   m_application->quit();
 }

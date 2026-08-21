@@ -7,6 +7,7 @@
 #include <QDBusConnection>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDBusReply>
 #include <QDBusServiceWatcher>
 #include <QtQml/QJSValue>
 
@@ -235,6 +236,23 @@ void BackendClient::setMode(const QString &mode) {
                       if (success)
                         requestRefresh(false);
                     });
+}
+
+bool BackendClient::restoreAutomaticForExit() {
+  clearError();
+  const QDBusReply<bool> reply = m_interface.call(
+      QDBus::BlockWithGui, QStringLiteral("SetMode"),
+      QStringLiteral("automatic"));
+  if (!reply.isValid()) {
+    setError(tr("退出前无法恢复自动风扇模式：%1")
+                 .arg(reply.error().message()));
+    return false;
+  }
+  if (!reply.value()) {
+    setError(tr("守护进程拒绝在退出前恢复自动风扇模式。"));
+    return false;
+  }
+  return true;
 }
 
 bool BackendClient::selectZone(const QString &zoneId) {

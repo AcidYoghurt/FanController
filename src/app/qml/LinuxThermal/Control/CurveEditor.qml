@@ -117,15 +117,20 @@ Panel {
                         required property int temperature
                         required property int duty
                         required property bool fixed
+                        readonly property var allPoints: root.curveModel.points
+                        readonly property var previousPoint: index > 0 ? allPoints[index - 1] : null
+                        readonly property var nextPoint: index + 1 < allPoints.length ? allPoints[index + 1] : null
                         Layout.fillWidth: true
                         spacing: 8
                         Text { Layout.preferredWidth: 34; text: qsTr("P%1").arg(pointRow.index + 1); color: Theme.text; font.pixelSize: 12; font.weight: Font.DemiBold; textFormat: Text.PlainText }
                         SpinBox {
                             id: temperatureBox
                             Layout.fillWidth: true
-                            from: 30; to: root.maximumTemperature
+                            from: pointRow.previousPoint ? Number(pointRow.previousPoint.temperature) + 1 : 30
+                            to: pointRow.nextPoint ? Number(pointRow.nextPoint.temperature) - 1 : root.maximumTemperature
                             value: pointRow.temperature
                             editable: true
+                            live: true
                             enabled: root.connected && !pointRow.fixed && !root.busy
                             Accessible.name: qsTr("P%1 温度").arg(pointRow.index + 1)
                             Accessible.description: pointRow.fixed ? qsTr("最高温度端点，只读") : qsTr("风扇曲线温度控制点")
@@ -136,9 +141,11 @@ Panel {
                         SpinBox {
                             id: dutyBox
                             Layout.fillWidth: true
-                            from: root.minimumDuty; to: 100
+                            from: pointRow.previousPoint ? Number(pointRow.previousPoint.duty) : root.minimumDuty
+                            to: pointRow.nextPoint ? Number(pointRow.nextPoint.duty) : 100
                             value: pointRow.duty
                             editable: true
+                            live: true
                             enabled: root.connected && !pointRow.fixed && !root.busy
                             Accessible.name: qsTr("P%1 风扇占空比").arg(pointRow.index + 1)
                             Accessible.description: pointRow.fixed ? qsTr("最高占空比端点，只读") : qsTr("风扇曲线占空比控制点")
@@ -162,7 +169,7 @@ Panel {
                 id: safetyText
                 anchors.fill: parent
                 anchors.margins: 12
-                text: qsTr("此区域最低占空比为 %1%；曲线终点固定为 %2°C / 100%；达到 %3°C 或传感器失效时会提前触发全速保护。降速每 5 秒最多降低 5%。").arg(root.minimumDuty).arg(root.maximumTemperature).arg(root.safetyTemperature)
+                text: qsTr("此区域最低占空比为 %1%；曲线终点固定为 %2°C / 100%；达到 %3°C 或传感器失效时会提前触发全速保护。降温需求持续 5 秒后，占空比每秒最多降低 2%。").arg(root.minimumDuty).arg(root.maximumTemperature).arg(root.safetyTemperature)
                 color: Theme.muted; font.pixelSize: 11; wrapMode: Text.WordWrap; textFormat: Text.PlainText
             }
         }

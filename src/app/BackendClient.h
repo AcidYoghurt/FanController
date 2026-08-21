@@ -102,6 +102,7 @@ public:
   Q_INVOKABLE void resetCurve();
   Q_INVOKABLE void discardCurveEdits();
   Q_INVOKABLE void clearError();
+  [[nodiscard]] bool restoreAutomaticForExit();
 
 signals:
   void connectedChanged();

@@ -34,6 +34,26 @@ private slots:
     controller.hideWindow();
     QVERIFY(!window.isVisible());
   }
+
+  void failedQuitPreparationKeepsApplicationRunning() {
+    auto *application =
+        qobject_cast<QApplication *>(QCoreApplication::instance());
+    QVERIFY(application);
+    TrayController controller(application, QIcon(), true);
+    int preparationCalls = 0;
+    controller.setQuitPreparation([&preparationCalls] {
+      ++preparationCalls;
+      return false;
+    });
+
+    controller.quitApplication();
+    QCOMPARE(preparationCalls, 1);
+    QVERIFY(!controller.quitRequested());
+
+    controller.quitApplication();
+    QCOMPARE(preparationCalls, 2);
+    QVERIFY(!controller.quitRequested());
+  }
 };
 
 QTEST_MAIN(TrayControllerTest)

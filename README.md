@@ -97,8 +97,11 @@ Ubuntu DKMS 公钥是否已注册。Info 页面不会建议关闭 Secure Boot。
 双击托盘图标    → 恢复主窗口
 “显示主窗口”    → 恢复并激活窗口
 “隐藏主窗口”    → 隐藏窗口
-“退出”          → 真正结束 GUI 进程
+“退出”          → 恢复自动风扇模式后结束 GUI 进程
 ```
+
+如果守护进程未确认已恢复自动模式，托盘退出会被取消，避免 GUI 结束后
+风扇仍停留在自定义曲线或满速模式。
 
 如果当前桌面环境完全不支持系统托盘，为避免程序隐藏后无法恢复，关闭窗口会退回普通退出行为。
 
@@ -117,14 +120,14 @@ GUI 在每个用户桌面会话中只允许一个实例。再次点击应用图�
 软件包输出：
 
 ```text
-dist/linux-thermal-control_0.5.13-5_amd64.deb
+dist/linux-thermal-control_0.5.13-6_amd64.deb
 ```
 
 安装本地 deb 时应使用 APT，让它解析并安装 `acpi-call-dkms`、`mokutil`、
 `shim-signed` 等强制依赖：
 
 ```bash
-sudo apt install ./dist/linux-thermal-control_0.5.13-5_amd64.deb
+sudo apt install ./dist/linux-thermal-control_0.5.13-6_amd64.deb
 ```
 
 安装脚本会自动检查 Secure Boot、生成 Ubuntu DKMS MOK、签名模块并在需要

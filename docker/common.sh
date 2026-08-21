@@ -6,10 +6,30 @@ DOCKER_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly DOCKER_DIR
 PROJECT_ROOT="$(cd -- "${DOCKER_DIR}/.." && pwd)"
 readonly PROJECT_ROOT
-readonly DEV_IMAGE="linux-thermal-control-dev:ubuntu22.04-qt6.11.2"
-readonly BASE_IMAGE="linux-thermal-ubuntu22-base:local"
-readonly QT_VERSION="6.11.2"
-readonly BUILD_CACHE_VOLUME="linux-thermal-control-build-cache"
+readonly ENV_FILE="${DOCKER_DIR}/.env"
+
+if [[ ! -r "${ENV_FILE}" ]]; then
+  echo "缺少 Docker 配置文件：${ENV_FILE}" >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+# 配置文件是 Docker 构建参数的唯一来源，避免脚本和 Dockerfile 各自维护版本。
+set -a
+# shellcheck disable=SC1090
+source "${ENV_FILE}"
+set +a
+
+readonly DOCKER_IMAGE_VERSION="${DOCKER_IMAGE_VERSION:?docker/.env 缺少 DOCKER_IMAGE_VERSION}"
+readonly DOCKER_PLATFORM="${DOCKER_PLATFORM:-linux/amd64}"
+readonly DOCKER_REPOSITORY="${DOCKER_REPOSITORY:?docker/.env 缺少 DOCKER_REPOSITORY}"
+readonly UBUNTU_BASE_IMAGE="${UBUNTU_BASE_IMAGE:?docker/.env 缺少 UBUNTU_BASE_IMAGE}"
+readonly LOCAL_BASE_IMAGE="${LOCAL_BASE_IMAGE:?docker/.env 缺少 LOCAL_BASE_IMAGE}"
+readonly UBUNTU_MIRROR="${UBUNTU_MIRROR:?docker/.env 缺少 UBUNTU_MIRROR}"
+readonly UBUNTU_SECURITY_MIRROR="${UBUNTU_SECURITY_MIRROR:?docker/.env 缺少 UBUNTU_SECURITY_MIRROR}"
+readonly QT_VERSION="${QT_VERSION:?docker/.env 缺少 QT_VERSION}"
+readonly BUILD_CACHE_VOLUME="${BUILD_CACHE_VOLUME:?docker/.env 缺少 BUILD_CACHE_VOLUME}"
+readonly DEV_IMAGE="${DOCKER_REPOSITORY}:${DOCKER_IMAGE_VERSION}"
+readonly BASE_IMAGE="${LOCAL_BASE_IMAGE}"
 
 log() {
   printf '[docker] %s\n' "$*"
@@ -131,9 +151,9 @@ ensure_base_image() {
   proxy="$(proxy_value)"
 
   if [[ -z "${proxy}" ]]; then
-    log '未检测到代理，尝试由 Docker 直接拉取 ubuntu:22.04。'
-    if docker pull --platform linux/amd64 ubuntu:22.04; then
-      docker tag ubuntu:22.04 "${BASE_IMAGE}"
+    log "未检测到代理，尝试由 Docker 直接拉取 ${UBUNTU_BASE_IMAGE}。"
+    if docker pull --platform "${DOCKER_PLATFORM}" "${UBUNTU_BASE_IMAGE}"; then
+      docker tag "${UBUNTU_BASE_IMAGE}" "${BASE_IMAGE}"
       return 0
     fi
   fi
@@ -143,17 +163,18 @@ ensure_base_image() {
     return 1
   }
 
-  log "使用自动检测到的代理 ${proxy} 导入官方 Ubuntu 22.04 amd64 镜像。"
+  log "使用自动检测到的代理 ${proxy} 导入 ${UBUNTU_BASE_IMAGE}。"
   crane="$(ensure_crane "${proxy}")"
   tools_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/linux-thermal-control"
 
   for attempt in 1 2 3 4; do
     image_archive="${tools_dir}/ubuntu-22.04-amd64-${attempt}.tar"
     if HTTP_PROXY="${proxy}" HTTPS_PROXY="${proxy}" ALL_PROXY='' \
-        "${crane}" pull --platform linux/amd64 ubuntu:22.04 "${image_archive}" \
+        "${crane}" pull --platform "${DOCKER_PLATFORM}" \
+          "${UBUNTU_BASE_IMAGE}" "${image_archive}" \
         && tar -tf "${image_archive}" >/dev/null 2>&1; then
       docker load -i "${image_archive}"
-      docker tag ubuntu:22.04 "${BASE_IMAGE}"
+      docker tag "${UBUNTU_BASE_IMAGE}" "${BASE_IMAGE}"
       python3 -c 'import pathlib,sys; pathlib.Path(sys.argv[1]).unlink(missing_ok=True)' "${image_archive}"
       return 0
     fi
@@ -180,11 +201,13 @@ build_image() {
   local args=(
     build
     --network host
-    --platform linux/amd64
+    --platform "${DOCKER_PLATFORM}"
     --file "${DOCKER_DIR}/Dockerfile"
     --tag "${DEV_IMAGE}"
     --build-arg "BASE_IMAGE=${BASE_IMAGE}"
     --build-arg "QT_VERSION=${QT_VERSION}"
+    --build-arg "UBUNTU_MIRROR=${UBUNTU_MIRROR}"
+    --build-arg "UBUNTU_SECURITY_MIRROR=${UBUNTU_SECURITY_MIRROR}"
     --build-arg "DEV_UID=$(id -u)"
     --build-arg "DEV_GID=$(id -g)"
     --build-arg "TIMEZONE=${timezone}"
@@ -211,7 +234,7 @@ run_dev() {
 
   local args=(
     run --rm --init
-    --platform linux/amd64
+    --platform "${DOCKER_PLATFORM}"
     --network host
     --user "$(id -u):$(id -g)"
     --workdir /workspace
@@ -310,7 +333,7 @@ run_gui() {
 
   local args=(
     run --rm --init
-    --platform linux/amd64
+    --platform "${DOCKER_PLATFORM}"
     --network host
     --user "$(id -u):$(id -g)"
     --workdir /workspace

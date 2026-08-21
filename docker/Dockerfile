@@ -4,6 +4,8 @@ FROM ${BASE_IMAGE} AS qt-dev
 
 ARG TARGETARCH
 ARG QT_VERSION=6.11.2
+ARG UBUNTU_MIRROR=http://archive.ubuntu.com/ubuntu
+ARG UBUNTU_SECURITY_MIRROR=http://security.ubuntu.com/ubuntu
 ARG DEV_USER=developer
 ARG DEV_UID=1000
 ARG DEV_GID=1000
@@ -16,6 +18,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
     TZ=${TIMEZONE} \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
+
+# 使用 .env 指定的软件源，同时保留主仓库与安全更新的独立配置。
+RUN sed -i \
+      -e "s|http://archive.ubuntu.com/ubuntu|${UBUNTU_MIRROR%/}|g" \
+      -e "s|http://security.ubuntu.com/ubuntu|${UBUNTU_SECURITY_MIRROR%/}|g" \
+      /etc/apt/sources.list
 
 RUN test "${TARGETARCH}" = "amd64" \
     || (echo "This development image supports linux/amd64 (x86_64) only; got ${TARGETARCH}" >&2; exit 1)

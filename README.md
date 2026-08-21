@@ -116,8 +116,28 @@ GUI 在每个用户桌面会话中只允许一个实例。再次点击应用图�
 软件包输出：
 
 ```text
-dist/linux-thermal-control_0.5.12-1_amd64.deb
+dist/linux-thermal-control_0.5.13-1_amd64.deb
 ```
+
+安装本地 deb 时应使用 APT，让它解析并安装 `acpi-call-dkms`、`mokutil`、
+`shim-signed` 等强制依赖：
+
+```bash
+sudo apt install ./dist/linux-thermal-control_0.5.13-1_amd64.deb
+```
+
+若 Secure Boot 已开启但 `acpi_call` 尚未被信任，无需关闭 Secure Boot 或
+Shim 验证。运行下面的助手生成 Ubuntu DKMS MOK、重新签名模块并发起注册：
+
+```bash
+sudo linux-thermal-secure-boot-setup --prepare
+```
+
+重启进入 MokManager 后选择 `Enroll MOK → Continue → Yes`，输入刚才设置的
+临时密码并再次重启。之后可执行
+`linux-thermal-secure-boot-setup --status` 检查 Secure Boot、MOK 和模块签名。
+MOK 的首次注册必须由本机用户在启动阶段确认，安装包不会关闭验证或静默
+改变信任库。
 
 `quick_start.sh` 不访问真实 EC、ACPI 或宿主机 hwmon 写入接口，可安全测试多传感器、多风扇、只读设备、三种模式和独立曲线。
 

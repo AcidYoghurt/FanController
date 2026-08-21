@@ -1,0 +1,40 @@
+.TH LINUX-THERMAL-SECURE-BOOT-SETUP 8 "2026-08-21" "linux-thermal-control 0.5.13" "System Administration"
+.SH NAME
+linux-thermal-secure-boot-setup \- enroll and verify the acpi_call module-signing key
+.SH SYNOPSIS
+.B linux-thermal-secure-boot-setup
+.RI [ --prepare | --status | --help ]
+.SH DESCRIPTION
+Prepares the DKMS-built
+.B acpi_call
+module for use while UEFI Secure Boot and Shim validation remain enabled.
+The prepare operation creates Ubuntu's shared DKMS machine-owner key when necessary,
+rebuilds the module for the running kernel, and requests enrollment of the
+public certificate through MokManager.
+.PP
+Enrollment deliberately requires physical confirmation at the next boot. The
+private key is never added to firmware and remains root-owned under
+.IR /var/lib/shim-signed/mok .
+.SH OPTIONS
+.TP
+.B --prepare
+Prepare and sign the module, then request MOK enrollment. This operation must
+be run as root and is the default.
+.TP
+.B --status
+Report UEFI Secure Boot state, MOK enrollment, and the installed module signer.
+.TP
+.B --help
+Show command usage.
+.SH FILES
+.TP
+.I /var/lib/shim-signed/mok/MOK.priv
+Machine-specific private module-signing key.
+.TP
+.I /var/lib/shim-signed/mok/MOK.der
+Public certificate enrolled through MokManager.
+.SH SEE ALSO
+.BR mokutil (1),
+.BR dkms (8),
+.BR modprobe (8),
+.BR update-secureboot-policy (8)

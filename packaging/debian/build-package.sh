@@ -7,7 +7,7 @@ readonly build_dir="${project_root}/build/docker-release"
 readonly stage_dir="${project_root}/build/package-root"
 readonly dist_dir="${project_root}/dist"
 readonly package_name="linux-thermal-control"
-readonly package_version="0.5.12-1"
+readonly package_version="0.5.13-1"
 readonly package_file="${dist_dir}/${package_name}_${package_version}_amd64.deb"
 
 cd "${project_root}"
@@ -40,6 +40,7 @@ done < <(find "${stage_dir}/usr/lib/linux-thermal-control" -type f   \( -name '*
 
 gzip -9n "${stage_dir}/usr/share/doc/linux-thermal-control/changelog.Debian"
 gzip -9n "${stage_dir}/usr/share/man/man1/linux-thermal-control.1"
+gzip -9n "${stage_dir}/usr/share/man/man8/linux-thermal-secure-boot-setup.8"
 
 install -m 0755 packaging/debian/postinst "${stage_dir}/DEBIAN/postinst"
 install -m 0755 packaging/debian/prerm "${stage_dir}/DEBIAN/prerm"
@@ -79,7 +80,7 @@ DEPENDENCY_CONTROL
 }
 
 runtime_dependencies="$(generate_runtime_dependencies)"
-manual_dependencies="fonts-noto-cjk, dbus, init-system-helpers (>= 1.18~), kmod, policykit-1, acpi-call-dkms, gcc-12"
+manual_dependencies="fonts-noto-cjk, dbus, init-system-helpers (>= 1.18~), kmod, policykit-1, acpi-call-dkms, gcc-12, mokutil, shim-signed"
 installed_size="$(du -sk "${stage_dir}" | awk '{print $1}')"
 cat > "${stage_dir}/DEBIAN/control" <<CONTROL
 Package: ${package_name}

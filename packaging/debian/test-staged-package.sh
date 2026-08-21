@@ -5,13 +5,26 @@ readonly stage_dir="$1"
 readonly app_root="${stage_dir}/usr/lib/linux-thermal-control"
 readonly daemon="${stage_dir}/usr/libexec/linux-thermal-control/linux-thermal-daemon"
 readonly gui="${stage_dir}/usr/bin/linux-thermal-control"
+readonly secure_boot_setup="${stage_dir}/usr/sbin/linux-thermal-secure-boot-setup"
 readonly curve_config="${stage_dir}/etc/linux-thermal-control/default-fan-curve.yaml"
 readonly package_control="${stage_dir}/DEBIAN/control"
 
 grep -Eq '^Depends: .*acpi-call-dkms([, ]|$)' "${package_control}"
 grep -Eq '^Depends: .*gcc-12([, ]|$)' "${package_control}"
+grep -Eq '^Depends: .*mokutil([, ]|$)' "${package_control}"
+grep -Eq '^Depends: .*shim-signed([, ]|$)' "${package_control}"
 if grep -Eq '^Suggests: .*acpi-call-dkms([, ]|$)' "${package_control}"; then
   echo 'acpi-call-dkms must be a required package dependency' >&2
+  exit 1
+fi
+
+[[ -x "${secure_boot_setup}" ]] || {
+  echo 'Secure Boot setup assistant is missing from the staged package' >&2
+  exit 1
+}
+"${secure_boot_setup}" --help >/dev/null
+if grep -Fq -- '--disable-validation' "${secure_boot_setup}"; then
+  echo 'staged Secure Boot assistant disables Shim validation' >&2
   exit 1
 fi
 

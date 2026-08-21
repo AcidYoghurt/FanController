@@ -87,6 +87,41 @@ private slots:
     QVERIFY(!status.value(QStringLiteral("disabled")).toBool());
   }
 
+  void secureBootRequiresKeyEnrollmentOnVerifiedClevoHardware() {
+    QTemporaryDir sysfs;
+    QTemporaryDir proc;
+    QVERIFY(sysfs.isValid());
+    QVERIFY(proc.isValid());
+
+    const auto writeFixture = [&sysfs](const QString &relativePath,
+                                        const QByteArray &contents) {
+      const auto path = sysfs.filePath(relativePath);
+      if (!QDir().mkpath(QFileInfo(path).absolutePath()))
+        return false;
+      QFile file(path);
+      return file.open(QIODevice::WriteOnly) && file.write(contents) == contents.size();
+    };
+    QVERIFY(writeFixture(QStringLiteral("class/dmi/id/sys_vendor"), "COLORFUL\n"));
+    QVERIFY(writeFixture(QStringLiteral("class/dmi/id/product_name"), "P16 TA 24\n"));
+    QVERIFY(writeFixture(QStringLiteral("bus/acpi/devices/CLV0001:00/path"),
+                         "\\_SB_.DCHU\n"));
+    QVERIFY(writeFixture(
+        QStringLiteral("firmware/efi/efivars/"
+                       "SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"),
+        QByteArray::fromHex("0600000001")));
+
+    qputenv("THERMAL_CONTROL_SYSFS_ROOT", sysfs.path().toUtf8());
+    qputenv("THERMAL_CONTROL_PROC_ROOT", proc.path().toUtf8());
+    FanController controller(true);
+    const auto secureBoot =
+        controller.status().value(QStringLiteral("secureBoot")).toMap();
+    QCOMPARE(secureBoot.value(QStringLiteral("requirement")).toString(),
+             QStringLiteral("enroll-key"));
+    QVERIFY(!secureBoot.value(QStringLiteral("acpiCallAvailable")).toBool());
+    qunsetenv("THERMAL_CONTROL_SYSFS_ROOT");
+    qunsetenv("THERMAL_CONTROL_PROC_ROOT");
+  }
+
   void defaultCurveIsSafe() {
     QString error;
     QVERIFY2(

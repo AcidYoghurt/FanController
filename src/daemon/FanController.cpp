@@ -566,7 +566,7 @@ QVariantMap FanController::status() const {
     requirement = clevoRelevant ? QStringLiteral("unknown")
                                 : QStringLiteral("not-required");
   else if (secureBootEnabled && clevoRelevant && !acpiCallAvailable)
-    requirement = QStringLiteral("disable-or-enroll-key");
+    requirement = QStringLiteral("enroll-key");
   secureBoot.insert(QStringLiteral("requirement"), requirement);
   secureBoot.insert(QStringLiteral("clevoRelevant"), clevoRelevant);
   secureBoot.insert(QStringLiteral("acpiCallAvailable"), acpiCallAvailable);

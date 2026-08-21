@@ -10,6 +10,10 @@ install(PROGRAMS
     ${PROJECT_SOURCE_DIR}/tools/linux-thermal-recovery
     DESTINATION /usr/libexec/linux-thermal-control
 )
+install(PROGRAMS
+    ${PROJECT_SOURCE_DIR}/tools/linux-thermal-secure-boot-setup
+    DESTINATION /usr/sbin
+)
 install(FILES
     systemd/linux-thermal-daemon.service
     DESTINATION /usr/lib/systemd/system
@@ -49,6 +53,10 @@ install(FILES
 install(FILES
     man/linux-thermal-control.1
     DESTINATION /usr/share/man/man1
+)
+install(FILES
+    man/linux-thermal-secure-boot-setup.8
+    DESTINATION /usr/share/man/man8
 )
 install(FILES
     debian/changelog

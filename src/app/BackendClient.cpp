@@ -93,8 +93,8 @@ bool BackendClient::secureBootDisabled() const {
   return secureBootMap().value(QStringLiteral("disabled")).toBool();
 }
 
-bool BackendClient::secureBootDisableRequired() const {
-  return secureBootRequirement() == QStringLiteral("disable-or-enroll-key");
+bool BackendClient::secureBootEnrollmentRequired() const {
+  return secureBootRequirement() == QStringLiteral("enroll-key");
 }
 
 QString BackendClient::safetyMessage() const {

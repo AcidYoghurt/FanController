@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly mok_dir="${LINUX_THERMAL_MOK_DIR:-/var/lib/shim-signed/mok}"
+readonly mok_key="${mok_dir}/MOK.priv"
+readonly mok_certificate="${mok_dir}/MOK.der"
+readonly sysfs_root="${LINUX_THERMAL_SYSFS_ROOT:-/sys}"
+readonly dkms_source_root="${LINUX_THERMAL_DKMS_SOURCE_ROOT:-/usr/src}"
+
+usage() {
+  cat <<'USAGE'
+Usage: linux-thermal-secure-boot-setup [--prepare | --status | --help]
+
+  --prepare  Generate a machine-owner key, rebuild the acpi_call DKMS module
+             with that key, and request enrollment at the next boot (default).
+  --status   Show Secure Boot, MOK enrollment, and acpi_call signature status.
+  --help     Show this help.
+USAGE
+}
+
+secure_boot_value() {
+  local variable
+  variable="$(find "${sysfs_root}/firmware/efi/efivars" -maxdepth 1 \
+    -type f -name 'SecureBoot-*' -print -quit 2>/dev/null || true)"
+  [[ -n "${variable}" ]] || return 1
+  od -An -t u1 "${variable}" | awk '{print $NF}'
+}
+
+secure_boot_enabled() {
+  [[ "$(secure_boot_value 2>/dev/null || true)" == "1" ]]
+}
+
+key_enrolled() {
+  [[ -f "${mok_certificate}" ]] &&
+    mokutil --test-key "${mok_certificate}" >/dev/null 2>&1
+}
+
+enrollment_pending() {
+  [[ -n "$(mokutil --list-new 2>/dev/null || true)" ]]
+}
+
+show_status() {
+  if [[ ! -d "${sysfs_root}/firmware/efi" ]]; then
+    echo "UEFI: not detected"
+    echo "Secure Boot: unavailable"
+  elif secure_boot_enabled; then
+    echo "UEFI: detected"
+    echo "Secure Boot: enabled"
+  else
+    echo "UEFI: detected"
+    echo "Secure Boot: disabled or unknown"
+  fi
+
+  if [[ ! -f "${mok_certificate}" ]]; then
+    echo "Ubuntu DKMS MOK: not generated"
+  elif key_enrolled; then
+    echo "Ubuntu DKMS MOK: enrolled"
+  else
+    echo "Ubuntu DKMS MOK: enrollment pending or not enrolled"
+  fi
+
+  local module_path signer
+  module_path="$(modinfo -n acpi_call 2>/dev/null || true)"
+  signer="$(modinfo -F signer acpi_call 2>/dev/null || true)"
+  if [[ -z "${module_path}" ]]; then
+    echo "acpi_call: not installed for kernel $(uname -r)"
+  elif [[ -z "${signer}" ]]; then
+    echo "acpi_call: installed but unsigned (${module_path})"
+  else
+    echo "acpi_call: signed by ${signer}"
+  fi
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "Required command is missing: $1" >&2
+    exit 1
+  }
+}
+
+find_acpi_call_version() {
+  local source_dir
+  source_dir="$(find "${dkms_source_root}" -mindepth 1 -maxdepth 1 \
+    -type d -name 'acpi-call-*' -print 2>/dev/null | sort -V | tail -n1)"
+  [[ -n "${source_dir}" ]] || {
+    echo "acpi-call-dkms is not installed." >&2
+    echo "Install this package with: sudo apt install acpi-call-dkms" >&2
+    exit 1
+  }
+  printf '%s\n' "${source_dir##*/acpi-call-}"
+}
+
+prepare() {
+  if [[ "${EUID}" -ne 0 ]]; then
+    echo "Run this operation as root:" >&2
+    echo "  sudo linux-thermal-secure-boot-setup --prepare" >&2
+    exit 1
+  fi
+  [[ -d "${sysfs_root}/firmware/efi" ]] || {
+    echo "This system was not booted through UEFI; MOK enrollment is unavailable." >&2
+    exit 1
+  }
+
+  require_command dkms
+  require_command mokutil
+  require_command modinfo
+  require_command update-secureboot-policy
+
+  local kernel version
+  kernel="$(uname -r)"
+  version="$(find_acpi_call_version)"
+
+  echo "Generating the machine-specific module-signing key if necessary..."
+  update-secureboot-policy --new-key
+
+  echo "Rebuilding acpi_call ${version} for kernel ${kernel}..."
+  if dkms status -m acpi-call -v "${version}" -k "${kernel}" 2>/dev/null |
+      grep -q 'installed'; then
+    dkms uninstall -m acpi-call -v "${version}" -k "${kernel}"
+  fi
+  # Ubuntu 22.04 DKMS also invokes the enrollment wizard after signing. Keep
+  # that nested invocation non-interactive so this assistant presents exactly
+  # one password prompt below.
+  DEBIAN_FRONTEND=noninteractive \
+    dkms build --force -m acpi-call -v "${version}" -k "${kernel}"
+  dkms install -m acpi-call -v "${version}" -k "${kernel}"
+
+  [[ -f "${mok_key}" && -f "${mok_certificate}" ]] || {
+    echo "Ubuntu did not create the expected MOK key pair in ${mok_dir}." >&2
+    exit 1
+  }
+
+  if key_enrolled; then
+    echo "The MOK is already enrolled. No firmware-side change is needed."
+    echo "Reboot, then run: sudo modprobe acpi_call"
+    return
+  fi
+
+  if enrollment_pending; then
+    echo "MOK enrollment is already queued; keeping the existing request."
+  elif secure_boot_enabled; then
+    echo "Requesting MOK enrollment. Choose a temporary 8-16 character password."
+    update-secureboot-policy --enroll-key
+  else
+    echo "Secure Boot is currently disabled; queuing the same MOK enrollment before it is enabled."
+    mokutil --import "${mok_certificate}"
+  fi
+
+  cat <<'NEXT_STEPS'
+
+Enrollment has been queued. Reboot and select:
+  Enroll MOK -> Continue -> Yes -> enter the temporary password -> Reboot
+
+After the second boot, verify with:
+  linux-thermal-secure-boot-setup --status
+  sudo modprobe acpi_call
+NEXT_STEPS
+}
+
+case "${1:---prepare}" in
+  --prepare)
+    prepare
+    ;;
+  --status)
+    require_command mokutil
+    require_command modinfo
+    show_status
+    ;;
+  --help|-h)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac

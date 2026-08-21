@@ -1,3 +1,14 @@
+linux-thermal-control (0.5.13-1) unstable; urgency=medium
+
+  * Keep UEFI Secure Boot and Shim validation enabled by signing acpi_call with
+    Ubuntu's machine-owner key and enrolling its public certificate.
+  * Add a root-only setup assistant that rebuilds the running-kernel DKMS
+    module, queues MOK enrollment, and reports signature status.
+  * Require mokutil and shim-signed, emit an actionable post-install notice,
+    and remove the remaining disable-or-enroll-key status wording.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Fri, 21 Aug 2026 12:00:00 +0800
+
 linux-thermal-control (0.5.12-1) unstable; urgency=medium
 
   * Apply the current custom-curve target immediately when switching from

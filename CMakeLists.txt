@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(LinuxThermalControl
-    VERSION 0.5.12
+    VERSION 0.5.13
     DESCRIPTION "Capability-aware Linux thermal and fan control"
     LANGUAGES CXX
 )

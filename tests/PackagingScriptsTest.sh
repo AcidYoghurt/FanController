@@ -12,9 +12,11 @@ curve_config="${project_root}/config/default-fan-curve.yaml"
 conffiles="${project_root}/packaging/debian/conffiles"
 build_package="${project_root}/packaging/debian/build-package.sh"
 hardware_curve_test="${project_root}/tests/HardwareCurveStressTest.sh"
+secure_boot_setup="${project_root}/tools/linux-thermal-secure-boot-setup"
 
 sh -n "${postinst}" "${postrm}" "${project_root}/packaging/debian/prerm"
-bash -n "${hardware_curve_test}"
+bash -n "${hardware_curve_test}" "${secure_boot_setup}"
+"${secure_boot_setup}" --help >/dev/null
 grep -Fq "expected_product='P16 TA 24'" "${hardware_curve_test}"
 grep -Fq 'trap restore_original_state EXIT INT TERM' "${hardware_curve_test}"
 grep -Fq 'dbus_call ApplyZoneCurve' "${hardware_curve_test}"
@@ -41,7 +43,17 @@ grep -Fq 'curve_backup=/etc/linux-thermal-control/.风扇曲线配置.backup' "$
 grep -Fq 'if [ -f "$curve_config" ] && [ ! -e "$curve_backup" ]' "${postinst}"
 grep -Fq 'cp -p "$curve_config" "$curve_backup"' "${postinst}"
 grep -Fq 'rm -f "$curve_backup"' "${postrm}"
-grep -Eq '^manual_dependencies=.*acpi-call-dkms.*gcc-12' "${build_package}"
+grep -Fq 'sudo linux-thermal-secure-boot-setup --prepare' "${postinst}"
+grep -Fq 'update-secureboot-policy --new-key' "${secure_boot_setup}"
+grep -Fq 'DEBIAN_FRONTEND=noninteractive' "${secure_boot_setup}"
+grep -Fq 'dkms build --force -m acpi-call' "${secure_boot_setup}"
+grep -Fq 'mokutil --list-new' "${secure_boot_setup}"
+grep -Fq 'update-secureboot-policy --enroll-key' "${secure_boot_setup}"
+if grep -Fq -- '--disable-validation' "${secure_boot_setup}" "${postinst}"; then
+  echo 'Secure Boot support must enroll a signing key, not disable validation' >&2
+  exit 1
+fi
+grep -Eq '^manual_dependencies=.*acpi-call-dkms.*gcc-12.*mokutil.*shim-signed' "${build_package}"
 if grep -Eq '^Suggests: .*acpi-call-dkms' "${build_package}"; then
   echo 'acpi-call-dkms must not remain an optional dependency' >&2
   exit 1

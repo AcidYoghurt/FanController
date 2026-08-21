@@ -16,6 +16,18 @@ reload_dbus_config() {
   fi
 }
 
+secure_boot_enabled() {
+  secure_boot_variable=
+  for candidate in /sys/firmware/efi/efivars/SecureBoot-*; do
+    if [ -f "$candidate" ]; then
+      secure_boot_variable=$candidate
+      break
+    fi
+  done
+  [ -n "$secure_boot_variable" ] || return 1
+  [ "$(od -An -t u1 "$secure_boot_variable" 2>/dev/null | awk '{print $NF}')" = 1 ]
+}
+
 if [ -f "$old_curve" ] && [ ! -e "$new_curve" ]; then
   install -d -m 0750 "$new_dir"
   cp -p "$old_curve" "$new_curve"
@@ -43,4 +55,24 @@ fi
 
 update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
 gtk-update-icon-cache -q /usr/share/icons/hicolor >/dev/null 2>&1 || true
+
+if secure_boot_enabled && [ ! -e /proc/acpi/call ]; then
+  if command -v mokutil >/dev/null 2>&1 &&
+      [ -n "$(mokutil --list-new 2>/dev/null || true)" ]; then
+    cat >&2 <<'SECURE_BOOT_PENDING_NOTICE'
+linux-thermal-control: acpi_call was signed and MOK enrollment is pending.
+Reboot, select Enroll MOK, and enter the temporary password from installation.
+After the next reboot, verify with:
+  linux-thermal-secure-boot-setup --status
+SECURE_BOOT_PENDING_NOTICE
+  else
+    cat >&2 <<'SECURE_BOOT_NOTICE'
+linux-thermal-control: Secure Boot is enabled, but acpi_call is not available.
+Keep Secure Boot and Shim validation enabled, then run:
+  sudo linux-thermal-secure-boot-setup --prepare
+After the requested reboot and MOK enrollment, verify with:
+  linux-thermal-secure-boot-setup --status
+SECURE_BOOT_NOTICE
+  fi
+fi
 exit 0

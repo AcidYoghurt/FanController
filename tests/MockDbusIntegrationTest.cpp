@@ -8,6 +8,8 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include <algorithm>
+
 namespace {
 QVariantList curve(int secondDuty = 50) {
   return {
@@ -19,6 +21,16 @@ QVariantList curve(int secondDuty = 50) {
                   {QStringLiteral("duty"), 65}},
       QVariantMap{{QStringLiteral("temperature"), 75},
                   {QStringLiteral("duty"), 80}},
+      QVariantMap{{QStringLiteral("temperature"), 85},
+                  {QStringLiteral("duty"), 100}},
+  };
+}
+QVariantList plateauCurve(int duty) {
+  return {
+      QVariantMap{{QStringLiteral("temperature"), 30},
+                  {QStringLiteral("duty"), duty}},
+      QVariantMap{{QStringLiteral("temperature"), 84},
+                  {QStringLiteral("duty"), duty}},
       QVariantMap{{QStringLiteral("temperature"), 85},
                   {QStringLiteral("duty"), 100}},
   };
@@ -94,6 +106,57 @@ private slots:
       if (fan.value(QStringLiteral("controllable")).toBool())
         QVERIFY(fan.value(QStringLiteral("duty")).toInt() > 0);
     }
+    setMode(QStringLiteral("automatic"));
+  }
+
+  void curveCommandsRoundTripThroughDbus() {
+    auto api = interface();
+    const QString zoneId = QStringLiteral("mock:cpu:zone");
+    const QString fanId = QStringLiteral("mock:cpu:fan0");
+    const QDBusReply<QVariantList> originalCurveReply =
+        api.call(QStringLiteral("GetZoneCurve"), zoneId);
+    QVERIFY2(originalCurveReply.isValid(),
+             qPrintable(originalCurveReply.error().message()));
+
+    const QList<int> requestedDuties{40, 43, 48, 55, 65, 75, 85, 95, 100};
+    for (const int requestedDuty : requestedDuties) {
+      const QDBusReply<bool> applyReply =
+          api.call(QStringLiteral("ApplyZoneCurve"), zoneId,
+                   plateauCurve(requestedDuty));
+      QVERIFY2(applyReply.isValid(), qPrintable(applyReply.error().message()));
+      QVERIFY(applyReply.value());
+
+      const auto feedback = status();
+      QCOMPARE(feedback.value(QStringLiteral("mode")).toString(),
+               QStringLiteral("custom-curve"));
+      const auto zones = feedback.value(QStringLiteral("zones")).toList();
+      const auto fans = feedback.value(QStringLiteral("fans")).toList();
+      const auto zone = std::find_if(
+          zones.cbegin(), zones.cend(), [&zoneId](const auto &value) {
+            return value.toMap().value(QStringLiteral("zoneId")).toString() ==
+                   zoneId;
+          });
+      const auto fan = std::find_if(
+          fans.cbegin(), fans.cend(), [&fanId](const auto &value) {
+            return value.toMap().value(QStringLiteral("fanId")).toString() ==
+                   fanId;
+          });
+      QVERIFY(zone != zones.cend());
+      QVERIFY(fan != fans.cend());
+      QCOMPARE(zone->toMap().value(QStringLiteral("currentDuty")).toInt(),
+               requestedDuty);
+      QCOMPARE(fan->toMap().value(QStringLiteral("duty")).toInt(),
+               requestedDuty);
+      QCOMPARE(fan->toMap().value(QStringLiteral("rpm")).toInt(),
+               700 + requestedDuty * 44);
+    }
+
+    const QDBusReply<bool> restoreCurveReply =
+        api.call(QStringLiteral("SetZoneCurve"), zoneId,
+                 originalCurveReply.value());
+    QVERIFY2(restoreCurveReply.isValid(),
+             qPrintable(restoreCurveReply.error().message()));
+    QVERIFY(restoreCurveReply.value());
     setMode(QStringLiteral("automatic"));
   }
 

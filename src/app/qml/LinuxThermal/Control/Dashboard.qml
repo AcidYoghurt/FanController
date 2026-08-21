@@ -8,6 +8,7 @@ StackView {
 
     required property var backend
     required property int currentPage
+    required property bool modeTransitioning
     signal modeRequested(string mode)
     signal editedCurveApplyRequested
 
@@ -37,6 +38,7 @@ StackView {
 
         ControlPage {
             backend: root.backend
+            modeTransitioning: root.modeTransitioning
             onModeRequested: mode => root.modeRequested(mode)
             onEditedCurveApplyRequested: root.editedCurveApplyRequested()
         }

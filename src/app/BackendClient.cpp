@@ -119,6 +119,9 @@ int BackendClient::minimumDuty() const {
 int BackendClient::safetyTemperature() const {
   return selectedProfile().value(QStringLiteral("safetyTemperature"), 85).toInt();
 }
+int BackendClient::maximumTemperature() const {
+  return selectedProfile().value(QStringLiteral("maximumTemperature"), 100).toInt();
+}
 bool BackendClient::curveSupported() const {
   return selectedProfile().value(QStringLiteral("curveSupported")).toBool();
 }
@@ -234,8 +237,8 @@ void BackendClient::setCurvePoint(int row, int temperature, int duty) {
   const int minimumTemperature = previous.isEmpty()
                                      ? selectedProfile().value(QStringLiteral("minimumTemperature"), 30).toInt()
                                      : previous.value(QStringLiteral("temperature")).toInt() + 1;
-  const int maximumTemperature = next.isEmpty()
-                                     ? safetyTemperature()
+  const int maximumPointTemperature = next.isEmpty()
+                                     ? maximumTemperature()
                                      : next.value(QStringLiteral("temperature")).toInt() - 1;
   const int minimumPointDuty = previous.isEmpty()
                                   ? minimumDuty()
@@ -243,7 +246,7 @@ void BackendClient::setCurvePoint(int row, int temperature, int duty) {
   const int maximumPointDuty = next.isEmpty()
                                   ? 100
                                   : next.value(QStringLiteral("duty")).toInt();
-  m_curvePoints.setPoint(row, qBound(minimumTemperature, temperature, maximumTemperature),
+  m_curvePoints.setPoint(row, qBound(minimumTemperature, temperature, maximumPointTemperature),
                          qBound(minimumPointDuty, duty, maximumPointDuty));
 }
 

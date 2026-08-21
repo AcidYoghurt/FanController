@@ -1,3 +1,36 @@
+linux-thermal-control (0.5.12-1) unstable; urgency=medium
+
+  * Apply the current custom-curve target immediately when switching from
+    full-speed instead of inheriting 100% and ramping down for nearly a minute.
+  * Allow NVIDIA NVML to initialize on RTX Laptop drivers by disabling the
+    incompatible ProtectClock systemd sandbox option while retaining the other
+    daemon hardening settings.
+  * Hide the blue live operating point when the active mode does not expose a
+    known duty instead of displaying an artificial 100% value.
+  * Add regression coverage for immediate full-speed to custom-curve switching.
+  * Require acpi-call-dkms and gcc-12 so the verified Clevo backend is usable
+    immediately after package installation on Ubuntu 22.04 HWE systems.
+  * Keep unrelated controls visually stable during mode changes and cross-fade
+    the confirmed mode selection instead of flashing the entire control page.
+  * Stress-test every custom-curve interpolation segment through the runtime
+    control loop, including observed mock RPM and the safety-temperature path.
+  * Add D-Bus command/feedback closed-loop coverage and a guarded real-hardware
+    test that validates ApplyZoneCurve replies, reported duty and four RPM feeds.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Thu, 20 Aug 2026 17:30:00 +0800
+
+linux-thermal-control (0.5.11-1) unstable; urgency=medium
+
+  * Move the ten-point default fan curve into a YAML configuration file.
+  * Create .风扇曲线配置.backup once when no snapshot exists and use the
+    existing snapshot for every Restore Default operation.
+  * Keep curve points out of C++ and adapt YAML duties to hardware minimums
+    while retaining early full-speed safety protection.
+  * Install the YAML file as a Debian conffile and add parser, backup lifecycle
+    and staged-package regression checks.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Thu, 20 Aug 2026 17:10:00 +0800
+
 linux-thermal-control (0.5.10-1) unstable; urgency=medium
 
   * Remove the Info-page judgement and recommendation about whether Secure Boot

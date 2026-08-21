@@ -1,6 +1,7 @@
 #include "FanController.h"
 
 #include "Constants.h"
+#include "FanCurveConfig.h"
 #include "backends/ClevoBackend.h"
 #include "backends/HwmonBackend.h"
 #include "backends/IdeaPadBackend.h"
@@ -23,7 +24,8 @@
 #include <algorithm>
 
 namespace {
-constexpr int CurvePointCount = 5;
+constexpr int MinimumCurvePointCount = 2;
+constexpr int MaximumCurvePointCount = 32;
 constexpr int DutyDecreaseStep = 5;
 constexpr int DutyWriteThreshold = 3;
 constexpr double TemperatureSmoothingAlpha = 0.35;
@@ -140,7 +142,16 @@ bool FanController::initialize(QString *error) {
   }
 
   for (const auto &zone : zones()) {
-    m_curves.insert(zone.id, defaultCurveForZone(zone));
+    const auto curve = defaultCurveForZone(zone);
+    QString curveError;
+    if (!validateCurveForZone(zone, curve, &curveError)) {
+      m_state = QStringLiteral("fatal-error");
+      if (error)
+        *error = QStringLiteral("Unable to load the default fan curve: %1")
+                     .arg(curveError);
+      return false;
+    }
+    m_curves.insert(zone.id, curve);
     m_curveRevisions.insert(zone.id, 1);
     m_zoneDuties.insert(zone.id, -1);
   }
@@ -278,6 +289,12 @@ bool FanController::applyModeToZones(Mode mode, QString *error) {
       m_zoneDuties[zone.id] = 100;
     } else if (mode == Mode::CustomCurve && zone.capabilities.customCurve) {
       ++applicable;
+      // A deliberate mode change must apply the curve target immediately.
+      // Keeping the previous full-speed duty would otherwise invoke the
+      // gradual 5%/5s cooldown path and leave the fan near 100% for a minute.
+      m_zoneDuties[zone.id] = -1;
+      m_controlTemperatures.remove(zone.id);
+      m_lastDutyDecrease.remove(zone.id);
       continue;
     } else {
       continue;
@@ -347,7 +364,13 @@ bool FanController::resetCurveForZone(const QString &zoneId, QString *error) {
       *error = QStringLiteral("Unknown fan zone.");
     return false;
   }
-  return setCurveForZone(zoneId, defaultCurveForZone(zone), error);
+  const auto curve = defaultCurveForZone(zone);
+  if (curve.isEmpty()) {
+    if (error)
+      *error = QStringLiteral("Unable to load .风扇曲线配置.backup.");
+    return false;
+  }
+  return setCurveForZone(zoneId, curve, error);
 }
 bool FanController::restoreAuto(QString *error) {
   return setMode(Mode::Automatic, error);
@@ -378,6 +401,14 @@ bool FanController::setMockSensorFailure(bool enabled) {
   if (!m_mockBackend)
     return false;
   m_mockBackend->setSensorFailure(enabled);
+  refreshTelemetry();
+  return true;
+}
+bool FanController::setMockSensorTemperature(const QString &sensorId,
+                                             double temperature) {
+  if (!m_mockBackend ||
+      !m_mockBackend->setSensorTemperature(sensorId, temperature))
+    return false;
   refreshTelemetry();
   return true;
 }
@@ -619,14 +650,29 @@ QString FanController::modeToString(Mode mode) {
 }
 
 QVariantList FanController::defaultCurve() {
-  return {curvePoint(40, 40), curvePoint(45, 40), curvePoint(65, 65),
-          curvePoint(75, 80), curvePoint(85, 100)};
+  Thermal::FanZone zone;
+  zone.minimumDuty = 40;
+  FanController temporary(true);
+  return temporary.defaultCurveForZone(zone);
 }
 QVariantList FanController::defaultCurveForZone(const Thermal::FanZone &zone) const {
-  const int minimum = qMax(zone.minimumDuty, 30);
-  return {curvePoint(40, minimum), curvePoint(45, minimum),
-          curvePoint(65, qMax(minimum, 65)), curvePoint(75, qMax(minimum, 80)),
-          curvePoint(zone.safetyTemperature, 100)};
+  const auto reference = FanCurveConfig::loadDefault();
+  if (reference.isEmpty())
+    return {};
+
+  QVariantList curve;
+  curve.reserve(reference.size());
+  for (const auto &value : reference) {
+    const auto point = value.toMap();
+    const int temperature = point.value(QStringLiteral("temperature")).toInt();
+    const int duty = point.value(QStringLiteral("duty")).toInt();
+    const int boundedTemperature =
+        qBound(zone.minimumTemperature, temperature, zone.maximumTemperature);
+    const int minimumDuty = zone.zeroRpmAllowed && duty == 0 ? 0 : zone.minimumDuty;
+    const int boundedDuty = qBound(minimumDuty, duty, zone.maximumDuty);
+    curve.push_back(curvePoint(boundedTemperature, boundedDuty));
+  }
+  return curve;
 }
 
 bool FanController::validateCurve(const QVariantList &curve, QString *error) {
@@ -643,9 +689,10 @@ bool FanController::validateCurve(const QVariantList &curve, QString *error) {
 bool FanController::validateCurveForZone(const Thermal::FanZone &zone,
                                          const QVariantList &curve,
                                          QString *error) const {
-  if (curve.size() != CurvePointCount) {
+  if (curve.size() < MinimumCurvePointCount ||
+      curve.size() > MaximumCurvePointCount) {
     if (error)
-      *error = QStringLiteral("A fan curve must contain exactly five points.");
+      *error = QStringLiteral("A fan curve must contain between two and 32 points.");
     return false;
   }
   int previousTemperature = -1;
@@ -663,10 +710,13 @@ bool FanController::validateCurveForZone(const Thermal::FanZone &zone,
     previousTemperature = temperature;
     previousDuty = duty;
   }
-  if (pointTemperature(curve.constLast()) != zone.safetyTemperature ||
-      pointDuty(curve.constLast()) != zone.maximumDuty) {
+  const int endpointTemperature = pointTemperature(curve.constLast());
+  const bool validEndpoint =
+      endpointTemperature == zone.maximumTemperature ||
+      endpointTemperature == zone.safetyTemperature;
+  if (!validEndpoint || pointDuty(curve.constLast()) != zone.maximumDuty) {
     if (error)
-      *error = QStringLiteral("The safety endpoint must be fixed at the zone safety temperature and 100%." );
+      *error = QStringLiteral("The curve endpoint must be fixed at the zone maximum temperature and maximum duty.");
     return false;
   }
   return true;

@@ -5,6 +5,24 @@ readonly stage_dir="$1"
 readonly app_root="${stage_dir}/usr/lib/linux-thermal-control"
 readonly daemon="${stage_dir}/usr/libexec/linux-thermal-control/linux-thermal-daemon"
 readonly gui="${stage_dir}/usr/bin/linux-thermal-control"
+readonly curve_config="${stage_dir}/etc/linux-thermal-control/default-fan-curve.yaml"
+readonly package_control="${stage_dir}/DEBIAN/control"
+
+grep -Eq '^Depends: .*acpi-call-dkms([, ]|$)' "${package_control}"
+grep -Eq '^Depends: .*gcc-12([, ]|$)' "${package_control}"
+if grep -Eq '^Suggests: .*acpi-call-dkms([, ]|$)' "${package_control}"; then
+  echo 'acpi-call-dkms must be a required package dependency' >&2
+  exit 1
+fi
+
+[[ -f "${curve_config}" ]] || {
+  echo 'default fan curve YAML is missing from the staged package' >&2
+  exit 1
+}
+grep -Fq 'temperature: 35' "${curve_config}"
+grep -Fq 'duty: 0' "${curve_config}"
+grep -Fq 'temperature: 100' "${curve_config}"
+grep -Fq 'duty: 100' "${curve_config}"
 
 if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
   exec dbus-run-session -- "$0" "${stage_dir}"

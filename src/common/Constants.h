@@ -1,7 +1,7 @@
 #pragma once
 
 namespace LinuxThermal::Constants {
-inline constexpr auto Version = "0.5.10";
+inline constexpr auto Version = "0.5.12";
 inline constexpr auto ServiceName = "org.linuxthermal.Control1";
 inline constexpr auto ObjectPath = "/org/linuxthermal/Control1";
 inline constexpr auto InterfaceName = "org.linuxthermal.Control1";

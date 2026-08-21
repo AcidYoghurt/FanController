@@ -1,4 +1,5 @@
 #include "../src/daemon/FanController.h"
+#include "../src/daemon/FanCurveConfig.h"
 #include "../src/daemon/backends/ClevoBackend.h"
 
 #include <QDir>
@@ -6,6 +7,16 @@
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QtMath>
+
+#include <algorithm>
+
+namespace {
+QVariantMap testCurvePoint(int temperature, int duty) {
+  return {{QStringLiteral("temperature"), temperature},
+          {QStringLiteral("duty"), duty}};
+}
+} // namespace
 
 class FanControllerTest final : public QObject {
   Q_OBJECT
@@ -83,6 +94,54 @@ private slots:
         qPrintable(error));
   }
 
+  void defaultCurveMatchesYamlReference() {
+    const auto curve = FanCurveConfig::loadFile(
+        QStringLiteral(LINUX_THERMAL_DEFAULT_CURVE_SOURCE_PATH));
+    QCOMPARE(curve.size(), 10);
+    QCOMPARE(curve.at(0).toMap().value(QStringLiteral("temperature")).toInt(), 35);
+    QCOMPARE(curve.at(0).toMap().value(QStringLiteral("duty")).toInt(), 0);
+    QCOMPARE(curve.at(1).toMap().value(QStringLiteral("temperature")).toInt(), 40);
+    QCOMPARE(curve.at(1).toMap().value(QStringLiteral("duty")).toInt(), 30);
+    QCOMPARE(curve.at(9).toMap().value(QStringLiteral("temperature")).toInt(), 100);
+    QCOMPARE(curve.at(9).toMap().value(QStringLiteral("duty")).toInt(), 100);
+  }
+
+  void createsAndKeepsDefaultCurveBackup() {
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const auto configPath = directory.filePath(QStringLiteral("default-fan-curve.yaml"));
+    QFile source(QStringLiteral(LINUX_THERMAL_DEFAULT_CURVE_SOURCE_PATH));
+    QVERIFY(source.open(QIODevice::ReadOnly));
+    const auto original = source.readAll();
+    source.close();
+
+    QFile config(configPath);
+    QVERIFY(config.open(QIODevice::WriteOnly));
+    QCOMPARE(config.write(original), original.size());
+    config.close();
+
+    qputenv("LINUX_THERMAL_DEFAULT_CURVE_CONFIG", configPath.toUtf8());
+    const auto backupPath =
+        directory.filePath(QStringLiteral(".风扇曲线配置.backup"));
+    QVERIFY(!QFileInfo::exists(backupPath));
+    QString error;
+    const auto first = FanCurveConfig::loadDefault(&error);
+    QVERIFY2(!first.isEmpty(), qPrintable(error));
+    QVERIFY(QFileInfo::exists(backupPath));
+
+    QVERIFY(config.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    const QByteArray edited(
+        "curve:\n"
+        "  points:\n"
+        "    - temperature: 30\n"
+        "      duty: 100\n");
+    QCOMPARE(config.write(edited), edited.size());
+    config.close();
+    const auto second = FanCurveConfig::loadDefault(&error);
+    QCOMPARE(second, first);
+    qunsetenv("LINUX_THERMAL_DEFAULT_CURVE_CONFIG");
+  }
+
   void rejectsUnsafeCurves() {
     auto lowDuty = FanController::defaultCurve();
     auto first = lowDuty.first().toMap();
@@ -99,8 +158,35 @@ private slots:
     auto noEmergency = FanController::defaultCurve();
     auto last = noEmergency.last().toMap();
     last.insert(QStringLiteral("duty"), 95);
-    noEmergency[4] = last;
+    noEmergency[noEmergency.size() - 1] = last;
     QVERIFY(!FanController::validateCurve(noEmergency));
+  }
+
+  void fullSpeedToCustomCurveAppliesTargetImmediately() {
+    FanController controller(true);
+    QString error;
+    QVERIFY2(controller.initialize(&error), qPrintable(error));
+    QVERIFY2(controller.setMode(FanController::Mode::FullSpeed, &error),
+             qPrintable(error));
+
+    auto status = controller.status();
+    auto zones = status.value(QStringLiteral("zones")).toList();
+    QVERIFY(!zones.isEmpty());
+    QCOMPARE(zones.constFirst().toMap()
+                 .value(QStringLiteral("currentDuty"))
+                 .toInt(),
+             100);
+
+    QVERIFY2(controller.setMode(FanController::Mode::CustomCurve, &error),
+             qPrintable(error));
+    status = controller.status();
+    zones = status.value(QStringLiteral("zones")).toList();
+    const auto duty = zones.constFirst().toMap()
+                          .value(QStringLiteral("currentDuty"))
+                          .toInt();
+    QVERIFY2(duty >= 0 && duty < 100,
+             qPrintable(QStringLiteral("Expected immediate curve duty, got %1%")
+                            .arg(duty)));
   }
 
   void sleepResumeReappliesSelectedMode() {
@@ -121,9 +207,9 @@ private slots:
     const auto path = directory.filePath(QStringLiteral("curve.json"));
 
     auto savedCurve = FanController::defaultCurve();
-    auto second = savedCurve.at(1).toMap();
-    second.insert(QStringLiteral("duty"), 55);
-    savedCurve[1] = second;
+    auto middle = savedCurve.at(4).toMap();
+    middle.insert(QStringLiteral("duty"), 55);
+    savedCurve[4] = middle;
 
     {
       FanController controller(true, path);
@@ -144,10 +230,115 @@ private slots:
     const auto curve = FanController::defaultCurve();
     QCOMPARE(FanController::dutyForTemperature(curve, 35.0), 40);
     QCOMPARE(FanController::dutyForTemperature(curve, 45.0), 40);
-    QCOMPARE(FanController::dutyForTemperature(curve, 50.0), 46);
-    QCOMPARE(FanController::dutyForTemperature(curve, 70.0), 73);
-    QCOMPARE(FanController::dutyForTemperature(curve, 85.0), 100);
-    QCOMPARE(FanController::dutyForTemperature(curve, 95.0), 100);
+    QCOMPARE(FanController::dutyForTemperature(curve, 50.0), 45);
+    QCOMPARE(FanController::dutyForTemperature(curve, 70.0), 70);
+    QCOMPARE(FanController::dutyForTemperature(curve, 85.0), 85);
+    QCOMPARE(FanController::dutyForTemperature(curve, 95.0), 95);
+  }
+
+  void interpolatesEveryDefaultCurveSegment() {
+    const auto curve = FanController::defaultCurve();
+    QVERIFY(curve.size() >= 2);
+
+    for (qsizetype index = 1; index < curve.size(); ++index) {
+      const auto lower = curve.at(index - 1).toMap();
+      const auto upper = curve.at(index).toMap();
+      const int lowerTemperature =
+          lower.value(QStringLiteral("temperature")).toInt();
+      const int upperTemperature =
+          upper.value(QStringLiteral("temperature")).toInt();
+      const int lowerDuty = lower.value(QStringLiteral("duty")).toInt();
+      const int upperDuty = upper.value(QStringLiteral("duty")).toInt();
+      const double sampleTemperature =
+          (lowerTemperature + upperTemperature) / 2.0;
+      const int expectedDuty = qBound(
+          40, qRound(lowerDuty + 0.5 * (upperDuty - lowerDuty)), 100);
+
+      QCOMPARE(FanController::dutyForTemperature(curve, sampleTemperature),
+               expectedDuty);
+    }
+  }
+
+  void customCurveRuntimeStressCoversEverySegment() {
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    FanController controller(
+        true, directory.filePath(QStringLiteral("stress-curves.json")));
+    QString error;
+    QVERIFY2(controller.initialize(&error), qPrintable(error));
+
+    const QString zoneId = QStringLiteral("mock:cpu:zone");
+    const QString sensorId = QStringLiteral("mock:cpu:package");
+    const QString fanId = QStringLiteral("mock:cpu:fan0");
+    const QVariantList curve{
+        testCurvePoint(35, 30), testCurvePoint(40, 35),
+        testCurvePoint(45, 40), testCurvePoint(50, 45),
+        testCurvePoint(55, 50), testCurvePoint(60, 55),
+        testCurvePoint(65, 60), testCurvePoint(70, 70),
+        testCurvePoint(75, 85), testCurvePoint(85, 100),
+    };
+    QVERIFY2(controller.setCurveForZone(zoneId, curve, &error),
+             qPrintable(error));
+
+    constexpr int SweepCount = 32;
+    for (int sweep = 0; sweep < SweepCount; ++sweep) {
+      for (qsizetype index = 1; index < curve.size(); ++index) {
+        const auto lower = curve.at(index - 1).toMap();
+        const auto upper = curve.at(index).toMap();
+        const int lowerTemperature =
+            lower.value(QStringLiteral("temperature")).toInt();
+        const int upperTemperature =
+            upper.value(QStringLiteral("temperature")).toInt();
+        const int lowerDuty = lower.value(QStringLiteral("duty")).toInt();
+        const int upperDuty = upper.value(QStringLiteral("duty")).toInt();
+        const double sampleTemperature =
+            (lowerTemperature + upperTemperature) / 2.0;
+        const int expectedDuty =
+            qRound(lowerDuty + 0.5 * (upperDuty - lowerDuty));
+
+        QVERIFY2(controller.setMode(FanController::Mode::Automatic, &error),
+                 qPrintable(error));
+        QVERIFY(controller.setMockSensorTemperature(sensorId,
+                                                    sampleTemperature));
+        QVERIFY2(controller.setMode(FanController::Mode::CustomCurve, &error),
+                 qPrintable(error));
+
+        const auto status = controller.status();
+        const auto zones = status.value(QStringLiteral("zones")).toList();
+        const auto fans = status.value(QStringLiteral("fans")).toList();
+        const auto zone = std::find_if(
+            zones.cbegin(), zones.cend(), [&zoneId](const auto &value) {
+              return value.toMap().value(QStringLiteral("zoneId")).toString() ==
+                     zoneId;
+            });
+        const auto fan = std::find_if(
+            fans.cbegin(), fans.cend(), [&fanId](const auto &value) {
+              return value.toMap().value(QStringLiteral("fanId")).toString() ==
+                     fanId;
+            });
+        QVERIFY(zone != zones.cend());
+        QVERIFY(fan != fans.cend());
+        QCOMPARE(zone->toMap().value(QStringLiteral("currentDuty")).toInt(),
+                 expectedDuty);
+        QCOMPARE(fan->toMap().value(QStringLiteral("duty")).toInt(),
+                 expectedDuty);
+        QCOMPARE(fan->toMap().value(QStringLiteral("rpm")).toInt(),
+                 700 + expectedDuty * 44);
+      }
+    }
+
+    QVERIFY(controller.setMockSensorTemperature(sensorId, 85.0));
+    const auto status = controller.status();
+    QVERIFY(status.value(QStringLiteral("safetyOverride")).toBool());
+    const auto zones = status.value(QStringLiteral("zones")).toList();
+    const auto cpuZone = std::find_if(
+        zones.cbegin(), zones.cend(), [&zoneId](const auto &value) {
+          return value.toMap().value(QStringLiteral("zoneId")).toString() ==
+                 zoneId;
+        });
+    QVERIFY(cpuZone != zones.cend());
+    QCOMPARE(cpuZone->toMap().value(QStringLiteral("currentDuty")).toInt(),
+             100);
   }
 };
 

@@ -1,6 +1,8 @@
 set(THERMAL_BACKEND_SOURCES
     ${PROJECT_SOURCE_DIR}/src/daemon/FanController.cpp
     ${PROJECT_SOURCE_DIR}/src/daemon/FanController.h
+    ${PROJECT_SOURCE_DIR}/src/daemon/FanCurveConfig.cpp
+    ${PROJECT_SOURCE_DIR}/src/daemon/FanCurveConfig.h
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/IFanBackend.h
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/HwmonBackend.cpp
     ${PROJECT_SOURCE_DIR}/src/daemon/backends/HwmonBackend.h
@@ -37,6 +39,7 @@ target_link_libraries(linux-thermal-tests PRIVATE
 target_compile_definitions(linux-thermal-tests PRIVATE
     QT_NO_CAST_FROM_ASCII
     QT_NO_CAST_TO_ASCII
+    LINUX_THERMAL_DEFAULT_CURVE_SOURCE_PATH=\"${PROJECT_SOURCE_DIR}/config/default-fan-curve.yaml\"
 )
 
 qt_add_executable(temperature-sensor-selector-tests

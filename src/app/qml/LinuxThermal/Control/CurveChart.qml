@@ -24,13 +24,13 @@ Item {
             const width = Math.max(1, canvas.width - left - right)
             const height = Math.max(1, canvas.height - top - bottom)
             const mapX = temperature => left + (temperature - 30) / 70 * width
-            const mapY = duty => top + (100 - duty) / 80 * height
+            const mapY = duty => top + (100 - duty) / 100 * height
 
             context.strokeStyle = Theme.border
             context.lineWidth = 1
             context.fillStyle = Theme.subtle
             context.font = "11px sans-serif"
-            for (let duty = 20; duty <= 100; duty += 20) {
+            for (let duty = 0; duty <= 100; duty += 20) {
                 const y = mapY(duty)
                 context.beginPath(); context.moveTo(left, y); context.lineTo(left + width, y); context.stroke()
                 context.fillText(duty + "%", 4, y + 4)
@@ -60,11 +60,11 @@ Item {
                 }
             }
 
-            if (root.currentTemperature >= 0) {
+            if (root.currentTemperature >= 0 && root.currentDuty >= 0) {
                 context.fillStyle = Theme.cool
                 context.beginPath()
                 context.arc(mapX(Math.max(30, Math.min(100, root.currentTemperature))),
-                            mapY(Math.max(20, root.currentDuty >= 0 ? root.currentDuty : 100)),
+                            mapY(Math.max(0, root.currentDuty)),
                             6, 0, Math.PI * 2)
                 context.fill()
             }

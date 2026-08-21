@@ -33,7 +33,7 @@ amdgpu、i915、nouveau、thinkpad、dell_smm、asus、nct6775 等
 ## 2. 安装与启动
 
 ```bash
-sudo apt install ./dist/linux-thermal-control_0.5.10-1_amd64.deb
+sudo apt install ./dist/linux-thermal-control_0.5.12-1_amd64.deb
 sudo systemctl enable --now linux-thermal-daemon.service
 systemctl status linux-thermal-daemon.service
 journalctl -u linux-thermal-daemon.service -b
@@ -61,7 +61,7 @@ linux-thermal-control
 - 崩溃时自动重启；
 - 正常停止时尝试恢复自动模式；
 - 不再使用 `ConditionPathExists=CLV0001`，因此通用 hwmon 机器也能启动；
-- `acpi-call-dkms` 仅是 Clevo 专用后端的建议依赖，不是通用 hwmon 的强制依赖。
+- 安装包强制依赖 `acpi-call-dkms` 和 `gcc-12`，确保 Clevo 专用后端在 Ubuntu 22.04 HWE 内核上能够编译并加载 `acpi_call`。
 
 重启和查看日志：
 
@@ -96,7 +96,11 @@ gdbus call --system \
 
 自定义曲线建议通过 GUI 编辑，因为 GUI 会应用区域最低占空比、点顺序和安全端点限制。
 
+默认曲线由 `/etc/linux-thermal-control/default-fan-curve.yaml` 描述。安装或首次启动时，如果配置目录中不存在 `.风扇曲线配置.backup`，程序会从 YAML 创建备份；“恢复默认”读取该备份。如果备份已经存在，则不会覆盖它。项目源码中的对应文件位于 `config/default-fan-curve.yaml`。
+
 ## 5. NVIDIA、AMD 与 Intel GPU
+
+若 `nvidia-smi` 可以读取 RTX Laptop GPU 温度，但 Info 页面没有 NVIDIA 后端，请确认安装版本不低于 `0.5.12`。旧版 systemd 单元使用 `ProtectClock=yes`，会在部分 NVIDIA Laptop 驱动上阻止 NVML 初始化；新版仅对该项放宽，其他服务沙箱限制保持不变。
 
 ### NVIDIA
 
@@ -160,6 +164,14 @@ sudo /usr/libexec/linux-thermal-control/linux-thermal-recovery automatic
 
 不要在其他机型执行该工具。
 
+开发树中还提供实机曲线闭环压力测试。它通过正式 D-Bus `ApplyZoneCurve` 接口依次发送默认曲线各区间的中点占空比，再通过 `GetStatus` 接收并校验模式、占空比与四路真实 RPM。测试会保存原曲线与模式，在退出、失败或中断时恢复：
+
+```bash
+sudo ./tests/HardwareCurveStressTest.sh --yes 4
+```
+
+该脚本仅允许在 DMI 与 `CLV0001/DCHU` 同时匹配的 `COLORFUL P16 TA 24` 上运行。`85–90°C` 和 `90–100°C` 两段在正常曲线控制中会被 85°C 安全全速覆盖；阶梯测试直接验证 EC 仍能接受它们对应的占空比。
+
 ## 9. 故障排查
 
 ### 服务运行但没有可控区域
@@ -196,7 +208,7 @@ sudo apt remove linux-thermal-control
 从 `0.5.6` 开始，安装脚本会自动执行 systemd manager reload、system D-Bus ReloadConfig，并启动 `linux-thermal-daemon.service`。正常情况下只安装 deb 即可：
 
 ```bash
-sudo apt install ./linux-thermal-control_0.5.10-1_amd64.deb
+sudo apt install ./linux-thermal-control_0.5.12-1_amd64.deb
 ```
 
 诊断命令：

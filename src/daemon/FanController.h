@@ -42,6 +42,8 @@ public:
   [[nodiscard]] Mode mode() const noexcept { return m_mode; }
   [[nodiscard]] bool isMockMode() const noexcept { return m_mockMode; }
   [[nodiscard]] bool setMockSensorFailure(bool enabled);
+  [[nodiscard]] bool setMockSensorTemperature(const QString &sensorId,
+                                              double temperature);
   [[nodiscard]] bool setMockCommandFailure();
 
   [[nodiscard]] static Mode modeFromString(QStringView value);

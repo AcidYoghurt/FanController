@@ -14,10 +14,28 @@ ApplicationWindow {
 
     property string displayedError: ""
     property int currentPage: 0
+    property bool modeTransitioning: false
+    property string pendingMode: ""
+    property bool modeReplyFinished: false
+    property bool modeRequestSucceeded: false
+
+    function finishModeTransitionIfReady() {
+        if (modeTransitioning && !modeExitDelay.running && modeReplyFinished
+                && (!modeRequestSucceeded || FanBackend.mode === pendingMode)) {
+            modeTransitioning = false
+            pendingMode = ""
+        }
+    }
+
+    Timer {
+        id: modeExitDelay
+        interval: Theme.animationFast
+        onTriggered: window.finishModeTransitionIfReady()
+    }
 
     header: AppHeader {
         connected: FanBackend.connected
-        busy: FanBackend.busy
+        busy: FanBackend.busy && !window.modeTransitioning
         refreshing: FanBackend.refreshing
         backendState: FanBackend.state
         systemName: FanBackend.systemName
@@ -32,9 +50,16 @@ ApplicationWindow {
         anchors.fill: parent
         backend: FanBackend
         currentPage: window.currentPage
+        modeTransitioning: window.modeTransitioning
         onModeRequested: mode => {
-            if (FanBackend.canSetMode(mode))
+            if (FanBackend.canSetMode(mode)) {
+                window.pendingMode = mode
+                window.modeReplyFinished = false
+                window.modeRequestSucceeded = false
+                window.modeTransitioning = true
+                modeExitDelay.restart()
                 FanBackend.setMode(mode)
+            }
         }
         onEditedCurveApplyRequested: {
             if (FanBackend.connected && !FanBackend.busy && FanBackend.curveSupported)
@@ -66,6 +91,19 @@ ApplicationWindow {
 
     Connections {
         target: FanBackend
+
+        function onModeChanged() {
+            window.finishModeTransitionIfReady()
+        }
+
+        function onModeRequestFinished(success, mode) {
+            if (!window.modeTransitioning || mode !== window.pendingMode)
+                return
+            window.modeReplyFinished = true
+            window.modeRequestSucceeded = success
+            window.finishModeTransitionIfReady()
+        }
+
         function onLastErrorChanged() {
             if (FanBackend.lastError.length > 0) {
                 window.displayedError = FanBackend.lastError

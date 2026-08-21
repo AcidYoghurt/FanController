@@ -24,4 +24,5 @@ QtObject {
     readonly property int cardRadius: 18
     readonly property int controlRadius: 12
     readonly property int animationFast: 140
+    readonly property int animationMedium: 200
 }

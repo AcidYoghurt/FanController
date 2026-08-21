@@ -16,6 +16,8 @@ public:
                                         int percent) override;
 
   void setSensorFailure(bool enabled);
+  [[nodiscard]] bool setSensorTemperature(const QString &sensorId,
+                                          double temperature);
   void failNextCommand();
 
 private:
@@ -24,6 +26,7 @@ private:
   QList<Thermal::FanDevice> m_fans;
   QList<Thermal::FanZone> m_zones;
   QHash<QString, int> m_duties;
+  QHash<QString, double> m_forcedTemperatures;
   int m_tick = 0;
   bool m_sensorFailure = false;
   bool m_failNext = false;

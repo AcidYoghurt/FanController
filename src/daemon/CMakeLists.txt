@@ -1,6 +1,8 @@
 qt_add_executable(linux-thermal-daemon
     FanController.cpp
     FanController.h
+    FanCurveConfig.cpp
+    FanCurveConfig.h
     FanService.cpp
     FanService.h
     backends/IFanBackend.h
@@ -35,6 +37,7 @@ target_link_libraries(linux-thermal-daemon PRIVATE
 target_compile_definitions(linux-thermal-daemon PRIVATE
     QT_NO_CAST_FROM_ASCII
     QT_NO_CAST_TO_ASCII
+    LINUX_THERMAL_DEFAULT_CURVE_SOURCE_PATH=\"${PROJECT_SOURCE_DIR}/config/default-fan-curve.yaml\"
 )
 
 install(TARGETS linux-thermal-daemon

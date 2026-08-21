@@ -39,6 +39,7 @@ class BackendClient final : public QObject {
   Q_PROPERTY(QString selectedZoneName READ selectedZoneName NOTIFY selectedZoneChanged FINAL)
   Q_PROPERTY(int minimumDuty READ minimumDuty NOTIFY selectedZoneChanged FINAL)
   Q_PROPERTY(int safetyTemperature READ safetyTemperature NOTIFY selectedZoneChanged FINAL)
+  Q_PROPERTY(int maximumTemperature READ maximumTemperature NOTIFY selectedZoneChanged FINAL)
   Q_PROPERTY(bool curveSupported READ curveSupported NOTIFY selectedZoneChanged FINAL)
   Q_PROPERTY(double selectedTemperature READ selectedTemperature NOTIFY selectedTelemetryChanged FINAL)
   Q_PROPERTY(int selectedDuty READ selectedDuty NOTIFY selectedTelemetryChanged FINAL)
@@ -76,6 +77,7 @@ public:
   [[nodiscard]] QString selectedZoneName() const;
   [[nodiscard]] int minimumDuty() const;
   [[nodiscard]] int safetyTemperature() const;
+  [[nodiscard]] int maximumTemperature() const;
   [[nodiscard]] bool curveSupported() const;
   [[nodiscard]] double selectedTemperature() const;
   [[nodiscard]] int selectedDuty() const;

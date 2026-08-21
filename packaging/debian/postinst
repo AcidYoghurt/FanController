@@ -5,6 +5,8 @@ service=linux-thermal-daemon.service
 old_curve=/var/lib/colorful-fan-control/curves.json
 new_dir=/var/lib/linux-thermal-control
 new_curve=$new_dir/curves.json
+curve_config=/etc/linux-thermal-control/default-fan-curve.yaml
+curve_backup=/etc/linux-thermal-control/.风扇曲线配置.backup
 
 reload_dbus_config() {
   if command -v dbus-send >/dev/null 2>&1 && [ -S /run/dbus/system_bus_socket ]; then
@@ -17,6 +19,10 @@ reload_dbus_config() {
 if [ -f "$old_curve" ] && [ ! -e "$new_curve" ]; then
   install -d -m 0750 "$new_dir"
   cp -p "$old_curve" "$new_curve"
+fi
+
+if [ -f "$curve_config" ] && [ ! -e "$curve_backup" ]; then
+  cp -p "$curve_config" "$curve_backup"
 fi
 
 if command -v deb-systemd-helper >/dev/null 2>&1; then

@@ -1,4 +1,4 @@
-.TH LINUX-THERMAL-CONTROL 1 "2026-08-19" "linux-thermal-control 0.5.10" "User Commands"
+.TH LINUX-THERMAL-CONTROL 1 "2026-08-19" "linux-thermal-control 0.5.12" "User Commands"
 .SH NAME
 linux-thermal-control \- capability-aware Linux thermal controller
 .SH SYNOPSIS
@@ -42,6 +42,12 @@ protection.
 .TP
 .I /var/lib/linux-thermal-control/curves.json
 Persisted per-zone curve profiles.
+.TP
+.I /etc/linux-thermal-control/default-fan-curve.yaml
+Editable YAML source used to create the initial default-curve snapshot.
+.TP
+.I /etc/linux-thermal-control/.风扇曲线配置.backup
+Persistent default-curve snapshot used by the Restore Default action.
 .TP
 .I /usr/lib/systemd/system/linux-thermal-daemon.service
 Privileged hardware-control daemon.

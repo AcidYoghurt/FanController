@@ -9,6 +9,7 @@ Button {
     property string description: ""
     property string glyph: ""
     property bool selected: false
+    property bool selectionVisible: selected
     property color accent: Theme.accent
 
     Accessible.name: title
@@ -21,12 +22,28 @@ Button {
 
     background: Rectangle {
         radius: 16
-        color: control.selected ? Qt.alpha(control.accent, Theme.dark ? 0.20 : 0.11)
-                                : control.hovered ? Theme.panelHover : Theme.panel
-        border.color: control.selected ? control.accent : Theme.border
-        border.width: control.selected ? 2 : 1
+        color: control.hovered ? Theme.panelHover : Theme.panel
+        border.color: Theme.border
+        border.width: 1
         Behavior on color { ColorAnimation { duration: Theme.animationFast } }
-        Behavior on border.color { ColorAnimation { duration: Theme.animationFast } }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: parent.radius
+            color: Qt.alpha(control.accent, Theme.dark ? 0.20 : 0.11)
+            border.color: control.accent
+            border.width: 2
+            opacity: control.selectionVisible ? 1 : 0
+
+            Behavior on opacity {
+                OpacityAnimator {
+                    duration: control.selectionVisible
+                              ? Theme.animationMedium : Theme.animationFast
+                    easing.type: control.selectionVisible
+                                 ? Easing.OutCubic : Easing.InCubic
+                }
+            }
+        }
     }
 
     contentItem: RowLayout {
@@ -47,10 +64,44 @@ Button {
         Rectangle {
             Layout.rightMargin: 18
             implicitWidth: 20; implicitHeight: 20; radius: 10
-            color: control.selected ? control.accent : "transparent"
-            border.color: control.selected ? control.accent : Theme.borderStrong
+            color: "transparent"
+            border.color: Theme.borderStrong
             border.width: 2
-            Text { anchors.centerIn: parent; text: "✓"; color: "white"; font.pixelSize: 12; font.weight: Font.Bold; visible: control.selected; textFormat: Text.PlainText }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: control.accent
+                opacity: control.selectionVisible ? 1 : 0
+
+                Behavior on opacity {
+                    OpacityAnimator {
+                        duration: control.selectionVisible
+                                  ? Theme.animationMedium : Theme.animationFast
+                        easing.type: control.selectionVisible
+                                     ? Easing.OutCubic : Easing.InCubic
+                    }
+                }
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: "✓"
+                color: "white"
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                opacity: control.selectionVisible ? 1 : 0
+                textFormat: Text.PlainText
+
+                Behavior on opacity {
+                    OpacityAnimator {
+                        duration: control.selectionVisible
+                                  ? Theme.animationMedium : Theme.animationFast
+                        easing.type: control.selectionVisible
+                                     ? Easing.OutCubic : Easing.InCubic
+                    }
+                }
+            }
         }
     }
 }

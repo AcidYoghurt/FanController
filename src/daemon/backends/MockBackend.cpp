@@ -2,6 +2,8 @@
 
 #include <QtMath>
 
+#include <algorithm>
+
 Thermal::BackendInfo MockBackend::info() const {
   return {QStringLiteral("mock"), QStringLiteral("Simulated hardware"),
           QStringLiteral("development"), QStringLiteral("ready"),
@@ -62,9 +64,15 @@ bool MockBackend::probe() {
 
 void MockBackend::refresh() {
   ++m_tick;
-  m_sensors[0].temperature = m_sensorFailure ? -1.0 : 61.0 + 9.0 * qSin(m_tick / 8.0);
+  m_sensors[0].temperature =
+      m_sensorFailure
+          ? -1.0
+          : m_forcedTemperatures.value(m_sensors[0].id,
+                                       61.0 + 9.0 * qSin(m_tick / 8.0));
   m_sensors[0].available = !m_sensorFailure;
-  m_sensors[1].temperature = 50.0 + 6.0 * qSin(m_tick / 11.0);
+  m_sensors[1].temperature =
+      m_forcedTemperatures.value(m_sensors[1].id,
+                                 50.0 + 6.0 * qSin(m_tick / 11.0));
   for (auto &fan : m_fans) {
     if (!fan.controllable)
       continue;
@@ -99,4 +107,17 @@ Thermal::Result MockBackend::setDuty(const QString &zoneId, int percent) {
   return command(zoneId, qBound(0, percent, 100));
 }
 void MockBackend::setSensorFailure(bool enabled) { m_sensorFailure = enabled; }
+bool MockBackend::setSensorTemperature(const QString &sensorId,
+                                       double temperature) {
+  const auto sensor = std::find_if(
+      m_sensors.begin(), m_sensors.end(), [&sensorId](const auto &candidate) {
+        return candidate.id == sensorId;
+      });
+  if (sensor == m_sensors.end() || !qIsFinite(temperature))
+    return false;
+  m_forcedTemperatures.insert(sensorId, temperature);
+  sensor->temperature = temperature;
+  sensor->available = true;
+  return true;
+}
 void MockBackend::failNextCommand() { m_failNext = true; }

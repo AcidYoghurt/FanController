@@ -7,6 +7,7 @@ ScrollView {
     objectName: "controlPage"
 
     required property var backend
+    required property bool modeTransitioning
     signal modeRequested(string mode)
     signal editedCurveApplyRequested
 
@@ -48,12 +49,14 @@ ScrollView {
             Layout.leftMargin: Theme.pageMargin
             Layout.rightMargin: Theme.pageMargin
             currentMode: root.backend.mode
-            automaticAvailable: root.backend.connected && !root.backend.busy
+            automaticAvailable: root.backend.connected
                                 && root.backend.automaticAvailable
-            fullSpeedAvailable: root.backend.connected && !root.backend.busy
+            fullSpeedAvailable: root.backend.connected
                                 && root.backend.fullSpeedAvailable
-            customCurveAvailable: root.backend.connected && !root.backend.busy
+            customCurveAvailable: root.backend.connected
                                   && root.backend.customCurveAvailable
+            interactionBlocked: root.backend.busy
+            modeTransitioning: root.modeTransitioning
             onModeRequested: mode => root.modeRequested(mode)
         }
 
@@ -68,11 +71,12 @@ ScrollView {
             selectedZoneName: root.backend.selectedZoneName
             minimumDuty: root.backend.minimumDuty
             safetyTemperature: root.backend.safetyTemperature
+            maximumTemperature: root.backend.maximumTemperature
             currentTemperature: root.backend.selectedTemperature
             currentDuty: root.backend.selectedDuty
             curveSupported: root.backend.curveSupported
             connected: root.backend.connected
-            busy: root.backend.busy
+            busy: root.backend.busy && !root.modeTransitioning
             conflict: root.backend.curveConflict
             onZoneRequested: zoneId => {
                 if (!root.backend.selectZone(zoneId))

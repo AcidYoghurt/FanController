@@ -12,6 +12,7 @@ Panel {
     required property string selectedZoneName
     required property int minimumDuty
     required property int safetyTemperature
+    required property int maximumTemperature
     required property real currentTemperature
     required property int currentDuty
     required property bool curveSupported
@@ -122,12 +123,12 @@ Panel {
                         SpinBox {
                             id: temperatureBox
                             Layout.fillWidth: true
-                            from: 30; to: root.safetyTemperature
+                            from: 30; to: root.maximumTemperature
                             value: pointRow.temperature
                             editable: true
                             enabled: root.connected && !pointRow.fixed && !root.busy
                             Accessible.name: qsTr("P%1 温度").arg(pointRow.index + 1)
-                            Accessible.description: pointRow.fixed ? qsTr("安全温度端点，只读") : qsTr("风扇曲线温度控制点")
+                            Accessible.description: pointRow.fixed ? qsTr("最高温度端点，只读") : qsTr("风扇曲线温度控制点")
                             textFromValue: function(number, locale) { return Number(number).toLocaleString(locale, "f", 0) + " °C" }
                             valueFromText: function(text, locale) { return Number.fromLocaleString(locale, text.replace("°C", "").trim()) }
                             onValueModified: root.pointEdited(pointRow.index, value, dutyBox.value)
@@ -140,7 +141,7 @@ Panel {
                             editable: true
                             enabled: root.connected && !pointRow.fixed && !root.busy
                             Accessible.name: qsTr("P%1 风扇占空比").arg(pointRow.index + 1)
-                            Accessible.description: pointRow.fixed ? qsTr("安全占空比端点，只读") : qsTr("风扇曲线占空比控制点")
+                            Accessible.description: pointRow.fixed ? qsTr("最高占空比端点，只读") : qsTr("风扇曲线占空比控制点")
                             textFromValue: function(number, locale) { return Number(number).toLocaleString(locale, "f", 0) + " %" }
                             valueFromText: function(text, locale) { return Number.fromLocaleString(locale, text.replace("%", "").trim()) }
                             onValueModified: root.pointEdited(pointRow.index, temperatureBox.value, value)
@@ -161,7 +162,7 @@ Panel {
                 id: safetyText
                 anchors.fill: parent
                 anchors.margins: 12
-                text: qsTr("此区域最低占空比为 %1%；安全端点固定为 %2°C / 100%；传感器失效会触发该区域全速保护。降速每 5 秒最多降低 5%。").arg(root.minimumDuty).arg(root.safetyTemperature)
+                text: qsTr("此区域最低占空比为 %1%；曲线终点固定为 %2°C / 100%；达到 %3°C 或传感器失效时会提前触发全速保护。降速每 5 秒最多降低 5%。").arg(root.minimumDuty).arg(root.maximumTemperature).arg(root.safetyTemperature)
                 color: Theme.muted; font.pixelSize: 11; wrapMode: Text.WordWrap; textFormat: Text.PlainText
             }
         }

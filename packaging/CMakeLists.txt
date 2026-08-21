@@ -27,6 +27,10 @@ install(FILES
     DESTINATION /usr/share/polkit-1/actions
 )
 install(FILES
+    ${PROJECT_SOURCE_DIR}/config/default-fan-curve.yaml
+    DESTINATION /etc/linux-thermal-control
+)
+install(FILES
     desktop/org.linuxthermal.Control.desktop
     DESTINATION /usr/share/applications
 )

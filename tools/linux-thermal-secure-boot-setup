@@ -31,8 +31,13 @@ secure_boot_enabled() {
 }
 
 key_enrolled() {
-  [[ -f "${mok_certificate}" ]] &&
-    mokutil --test-key "${mok_certificate}" >/dev/null 2>&1
+  [[ -f "${mok_certificate}" ]] || return 1
+  # mokutil 0.6.0 on Ubuntu 22.04 can print "is already enrolled" but still
+  # return 1 when the kernel trusted keyring is unavailable to the caller.
+  # Its explicit enrollment result is therefore authoritative here.
+  local result
+  result="$(mokutil --test-key "${mok_certificate}" 2>&1 || true)"
+  grep -Fq 'is already enrolled' <<<"${result}"
 }
 
 enrollment_pending() {

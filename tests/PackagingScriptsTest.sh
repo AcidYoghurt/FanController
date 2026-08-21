@@ -48,6 +48,7 @@ grep -Fq 'update-secureboot-policy --new-key' "${secure_boot_setup}"
 grep -Fq 'DEBIAN_FRONTEND=noninteractive' "${secure_boot_setup}"
 grep -Fq 'dkms build --force -m acpi-call' "${secure_boot_setup}"
 grep -Fq 'mokutil --list-new' "${secure_boot_setup}"
+grep -Fq "grep -Fq 'is already enrolled'" "${secure_boot_setup}"
 grep -Fq 'update-secureboot-policy --enroll-key' "${secure_boot_setup}"
 if grep -Fq -- '--disable-validation' "${secure_boot_setup}" "${postinst}"; then
   echo 'Secure Boot support must enroll a signing key, not disable validation' >&2

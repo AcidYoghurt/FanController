@@ -2,8 +2,6 @@
 
 一个使用 **C++23、Qt 6.11.2、Qt Quick/QML、systemd、D-Bus 与 Polkit** 开发的 Linux 温度与风扇控制程序。
 
-项目已完整更名为 **Linux Thermal Control**；旧 `colorful-fan-control` 软件包在安装新版本时会被替换，已有曲线配置会自动迁移。
-
 ## 当前能力
 
 - 自动发现 Intel/AMD CPU 温度传感器：`coretemp`、`k10temp`、`zenpower` 等 hwmon 驱动；
@@ -120,15 +118,17 @@ GUI 在每个用户桌面会话中只允许一个实例。再次点击应用图�
 软件包输出：
 
 ```text
-dist/linux-thermal-control_0.5.13-6_amd64.deb
+dist/linux-thermal-control_VERSION_amd64.deb
 ```
 
 安装本地 deb 时应使用 APT，让它解析并安装 `acpi-call-dkms`、`mokutil`、
 `shim-signed` 等强制依赖：
 
 ```bash
-sudo apt install ./dist/linux-thermal-control_0.5.13-6_amd64.deb
+sudo apt install ./dist/linux-thermal-control_VERSION_amd64.deb
 ```
+
+请将 `VERSION` 替换为构建脚本输出的实际版本号。
 
 安装脚本会自动检查 Secure Boot、生成 Ubuntu DKMS MOK、签名模块并在需要
 时启动注册向导；已有有效 MOK 的机器无需任何额外操作。如果安装运行在无法
@@ -141,7 +141,7 @@ sudo linux-thermal-secure-boot-setup --prepare
 重启进入 MokManager 后选择 `Enroll MOK → Continue → Yes`，输入刚才设置的
 临时密码并再次重启。之后可执行
 `linux-thermal-secure-boot-setup --status` 检查 Secure Boot、MOK 和模块签名。
-MOK 的首次注册必须由本机用户在启动阶段确认，安装包不会关闭验证或静默
+MOK 的首次注册必须由本地用户在启动阶段确认，安装包不会关闭验证或静默
 改变信任库。
 
 `quick_start.sh` 不访问真实 EC、ACPI 或宿主机 hwmon 写入接口，可安全测试多传感器、多风扇、只读设备、三种模式和独立曲线。

@@ -178,6 +178,7 @@ bool FanService::authorizeCaller(QString *error) const {
     return false;
   }
 
+  // pkcheck 直接解析系统总线唯一名称，可避免信任调用方提交的 PID 或 UID。
   const auto busName = message().service();
   if (busName.isEmpty()) {
     if (error)

@@ -13,6 +13,7 @@
 namespace {
 using NvmlReturn = int;
 using NvmlDevice = void *;
+// NVML ABI 中固定的成功码、GPU 温度类型和风扇信息结构版本。
 constexpr NvmlReturn NvmlSuccess = 0;
 constexpr unsigned NvmlTemperatureGpu = 0;
 constexpr unsigned NvmlFanInfoVersion = (1u << 24u) | (3u * sizeof(unsigned));

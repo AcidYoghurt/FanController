@@ -7,6 +7,8 @@
 
 namespace LinuxThermal::TemperatureSensorSelector {
 namespace Detail {
+// 给 CPU 传感器名称排序。包温度或 Tctl 比单核瞬时温度更适合界面展示和
+// 风扇控制，因此优先级更高。
 inline int cpuPriority(const QVariantMap &sensor) {
   const auto name = sensor.value(QStringLiteral("displayName")).toString().trimmed();
   if (name.compare(QStringLiteral("Tctl"), Qt::CaseInsensitive) == 0)
@@ -20,6 +22,8 @@ inline int cpuPriority(const QVariantMap &sensor) {
   return 0;
 }
 
+// 优先使用独立显卡驱动提供的 GPU 核心或边缘温度，避免把同设备的次要
+// 传感器当成界面主读数。
 inline int gpuPriority(const QVariantMap &sensor) {
   const auto name = sensor.value(QStringLiteral("displayName")).toString().trimmed();
   const auto backendId = sensor.value(QStringLiteral("backendId")).toString();
@@ -35,6 +39,8 @@ inline int gpuPriority(const QVariantMap &sensor) {
   return 0;
 }
 
+// 选择指定设备类型的主传感器。先选择可用传感器，再比较语义优先级；
+// 条件相同时取较高温度，避免掩盖热端读数。
 inline QVariantMap selectForKind(const QVariantList &sensors,
                                  const QString &kind) {
   QVariantMap selected;
@@ -67,6 +73,7 @@ inline QVariantMap selectForKind(const QVariantList &sensors,
 }
 } // namespace Detail
 
+// 最多返回一个 CPU 和一个 GPU 主传感器，并保持 CPU 在前的稳定顺序。
 inline QVariantList selectPrimary(const QVariantList &sensors) {
   QVariantList result;
   const auto cpu = Detail::selectForKind(sensors, QStringLiteral("cpu"));

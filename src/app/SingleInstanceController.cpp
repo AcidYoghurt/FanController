@@ -5,6 +5,7 @@
 #include <QDBusReply>
 
 namespace {
+// GUI 单实例协议只存在于当前用户的会话总线上，不与系统守护进程共用名称。
 constexpr auto ServiceName = "org.linuxthermal.Control.Gui";
 constexpr auto ObjectPath = "/org/linuxthermal/Control/Gui";
 constexpr auto InterfaceName = "org.linuxthermal.Control.Gui1";

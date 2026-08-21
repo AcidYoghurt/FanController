@@ -2,6 +2,8 @@
 
 #include "IFanBackend.h"
 
+// 通过 thinkpad_acpi 的 /proc/acpi/ibm/fan 接口控制风扇等级。
+// 只有内核明确启用 fan_control 且列出相应命令时才公开写能力。
 class ThinkPadBackend final : public IFanBackend {
 public:
   explicit ThinkPadBackend(QString procRoot = {}, QString sysfsRoot = {});

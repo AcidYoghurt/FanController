@@ -26,15 +26,20 @@
 #include <numeric>
 
 namespace {
+// 曲线点数边界限制了 D-Bus 负载，也保证分段插值成本可控。
 constexpr int MinimumCurvePointCount = 2;
 constexpr int MaximumCurvePointCount = 32;
+// 普通温度变化先经过迟滞，再按固定步长调整占空比。
 constexpr int DutySlewStep = 2;
 constexpr int DutyHysteresis = 4;
+// 控制温度采用固定长度的滑动窗口，覆盖约八秒遥测。
 constexpr int TemperatureAverageSampleCount = 8;
-// The telemetry timer runs every 1000 ms. Leave scheduling tolerance so a
-// callback that arrives a few milliseconds early does not halve the slew rate.
+// 遥测定时器每 1000 毫秒运行一次。预留调度容差，避免提前几毫秒到达的
+// 回调把实际占空比变化速率减半。
 constexpr qint64 DutySlewIntervalMs = 900;
+// 降温需求持续五秒后才允许降低占空比。
 constexpr qint64 DutyDecreaseDelayMs = 5000;
+// 原始温度进入硬件上限前五度时绕过平滑，立即满速。
 constexpr int EmergencyTemperatureMargin = 5;
 
 QVariantMap curvePoint(int temperature, int duty) {
@@ -298,9 +303,8 @@ bool FanController::applyModeToZones(Mode mode, QString *error) {
       m_zoneDuties[zone.id] = 100;
     } else if (mode == Mode::CustomCurve && zone.capabilities.customCurve) {
       ++applicable;
-      // A deliberate mode change must apply the curve target immediately.
-      // Keeping the previous full-speed duty would otherwise invoke the
-      // gradual 5%/5s cooldown path and leave the fan near 100% for a minute.
+      // 用户主动切换模式时必须立即应用曲线目标。否则沿用此前的满速占空比
+      // 会进入渐进降速流程，导致风扇长时间停留在接近 100% 的状态。
       m_zoneDuties[zone.id] = -1;
       m_controlTemperatures.remove(zone.id);
       m_temperatureSamples.remove(zone.id);
@@ -474,8 +478,8 @@ bool FanController::applyCustomControl(QString *error) {
 
     auto &temperatureSamples = m_temperatureSamples[zone.id];
     if (temperatureSamples.isEmpty()) {
-      // Start with a complete baseline window. A mode switch must not give the
-      // first isolated reading disproportionate weight in the moving average.
+      // 用完整的基线窗口开始采样，避免模式切换后的首个孤立读数在移动平均
+      // 中获得不成比例的权重。
       temperatureSamples.fill(sensor->temperature,
                               TemperatureAverageSampleCount);
     } else {
@@ -488,6 +492,8 @@ bool FanController::applyCustomControl(QString *error) {
     controlTemperature = std::accumulate(temperatureSamples.cbegin(),
                                          temperatureSamples.cend(), 0.0) /
                          temperatureSamples.size();
+    // 平均温度达到安全阈值时仍按限速规则升速，避免单次尖峰造成转速跳变；
+    // 原始温度逼近硬件上限时则直接满速，不能让滤波延迟紧急保护。
     const bool curveSafetyTemperatureReached =
         controlTemperature >= zone.safetyTemperature;
     const double emergencyTemperature =
@@ -529,8 +535,8 @@ bool FanController::applyCustomControl(QString *error) {
           shouldWrite = true;
         }
       } else {
-        // Restart the cooldown while demand is stable. A future decrease must
-        // remain requested for the complete delay before the first down-step.
+        // 需求稳定时重新开始降速等待。后续降速请求必须持续完整等待周期，
+        // 才能执行第一个下降步进。
         decreaseTimer.restart();
       }
     }

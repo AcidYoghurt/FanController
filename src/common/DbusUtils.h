@@ -7,6 +7,9 @@
 #include <QVariantMap>
 
 namespace LinuxThermal::Dbus {
+// 递归移除 QtDBus 为 variant、数组和映射添加的包装层。
+// 返回值只包含 QVariant、QVariantList、QVariantMap 及标量，便于 QML 和
+// 普通 C++ 代码按同一方式读取。
 inline QVariant unwrap(const QVariant &value) {
   if (value.metaType() == QMetaType::fromType<QDBusVariant>())
     return unwrap(value.value<QDBusVariant>().variant());

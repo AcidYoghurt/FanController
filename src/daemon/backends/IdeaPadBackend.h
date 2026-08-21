@@ -2,6 +2,8 @@
 
 #include "IFanBackend.h"
 
+// 读取 IdeaPad/ThinkBook 固件风扇模式和平台配置。
+// 这些值没有跨机型稳定的占空比语义，因此后端只报告遥测，不执行写入。
 class IdeaPadBackend final : public IFanBackend {
 public:
   explicit IdeaPadBackend(QString sysfsRoot = {});

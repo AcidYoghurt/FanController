@@ -4,6 +4,8 @@
 
 #include <QHash>
 
+// 探测标准 Linux hwmon 温度、转速和控制属性。
+// 只有驱动同时公开可写控制开关与目标值时，通道才会标记为可控。
 class HwmonBackend final : public IFanBackend {
 public:
   explicit HwmonBackend(QString sysfsRoot = {});
@@ -20,6 +22,7 @@ public:
                                         int percent) override;
 
 private:
+  // 区分标准 pwmN 控制与 Apple SMC 的目标转速控制。
   enum class ControlProtocol { Pwm, AppleSmc };
 
   struct Channel {
@@ -34,7 +37,7 @@ private:
     QString sensorId;
     Thermal::DeviceKind kind = Thermal::DeviceKind::Unknown;
     int pwmMaximum = 255;
-    int automaticValue = -1;
+    int automaticValue = -1;  // -1 表示驱动没有声明自动控制值。
     ControlProtocol protocol = ControlProtocol::Pwm;
     QString manualPath;
     QString targetPath;

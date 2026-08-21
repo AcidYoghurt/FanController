@@ -240,6 +240,8 @@ void BackendClient::setMode(const QString &mode) {
 
 bool BackendClient::restoreAutomaticForExit() {
   clearError();
+  // 托盘退出会马上停止 Qt 事件循环，异步调用可能来不及送达或读取确认，
+  // 因此这里必须等守护进程明确回复。
   const QDBusReply<bool> reply = m_interface.call(
       QDBus::BlockWithGui, QStringLiteral("SetMode"),
       QStringLiteral("automatic"));

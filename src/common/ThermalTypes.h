@@ -7,10 +7,13 @@
 
 namespace Thermal {
 
+// 表示控制器对风扇区域采用的统一控制策略。
 enum class ControlMode { Automatic, FullSpeed, CustomCurve, Unknown };
 
+// 表示遥测或控制对象所属的散热设备类型。
 enum class DeviceKind { Cpu, Gpu, System, Unknown };
 
+// 汇总一个后端或控制区域实际支持的功能。
 struct CapabilitySet {
   bool telemetry = false;
   bool automatic = false;
@@ -18,16 +21,18 @@ struct CapabilitySet {
   bool customCurve = false;
 };
 
+// 描述一个稳定标识的温度传感器快照。
 struct TemperatureSensor {
   QString id;
   QString backendId;
   QString deviceId;
   QString displayName;
   DeviceKind kind = DeviceKind::Unknown;
-  double temperature = -1.0;
+  double temperature = -1.0;  // `available` 为 false 时保持 -1。
   bool available = false;
 };
 
+// 描述一只风扇的遥测、控制能力和当前状态。
 struct FanDevice {
   QString id;
   QString backendId;
@@ -35,8 +40,8 @@ struct FanDevice {
   QString deviceId;
   QString displayName;
   DeviceKind kind = DeviceKind::Unknown;
-  int rpm = -1;
-  int duty = -1;
+  int rpm = -1;   // 后端无法读取转速时为 -1。
+  int duty = -1;  // 自动模式或无法读取占空比时为 -1。
   bool rpmAvailable = false;
   bool controllable = false;
   bool automaticSupported = false;
@@ -47,6 +52,7 @@ struct FanDevice {
   QString status;
 };
 
+// 将一个温度传感器与一组同步控制的风扇及其安全边界关联起来。
 struct FanZone {
   QString id;
   QString backendId;
@@ -64,6 +70,7 @@ struct FanZone {
   bool zeroRpmAllowed = false;
 };
 
+// 描述后端的探测结果及聚合能力。
 struct BackendInfo {
   QString id;
   QString displayName;
@@ -73,6 +80,7 @@ struct BackendInfo {
   CapabilitySet capabilities;
 };
 
+// 表示硬件写操作的结果。失败时同时提供稳定错误码和可读消息。
 struct Result {
   bool success = true;
   QString code;

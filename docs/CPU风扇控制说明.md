@@ -33,7 +33,7 @@ amdgpu、i915、nouveau、thinkpad、dell_smm、asus、nct6775 等
 ## 2. 安装与启动
 
 ```bash
-sudo apt install ./dist/linux-thermal-control_0.5.13-6_amd64.deb
+sudo apt install ./dist/linux-thermal-control_VERSION_amd64.deb
 sudo systemctl enable --now linux-thermal-daemon.service
 systemctl status linux-thermal-daemon.service
 journalctl -u linux-thermal-daemon.service -b
@@ -117,7 +117,7 @@ gdbus call --system \
 
 ## 5. NVIDIA、AMD 与 Intel GPU
 
-若 `nvidia-smi` 可以读取 RTX Laptop GPU 温度，但 Info 页面没有 NVIDIA 后端，请确认安装版本不低于 `0.5.12`。旧版 systemd 单元使用 `ProtectClock=yes`，会在部分 NVIDIA Laptop 驱动上阻止 NVML 初始化；新版仅对该项放宽，其他服务沙箱限制保持不变。
+若 `nvidia-smi` 能读取 GPU 温度，但 Info 页面没有 NVIDIA 后端，请检查守护进程日志与 NVML 动态库。软件包提供的 systemd 单元允许 NVML 访问所需的时钟设备，同时保留其他服务沙箱限制。
 
 ### NVIDIA
 
@@ -157,7 +157,7 @@ Intel iGPU 可能只有温度，没有独立风扇。此时界面显示温度，
 
 ## 7. Lenovo IdeaPad / ThinkBook 固件接口
 
-联想支持页面中的 `ThinkBook 14 G7 AHP` 与本机 DMI 的 `ThinkBook 14 G7+ AHP (21U4)` 是两个不同机型。本机由 `ideapad_laptop` 提供：
+IdeaPad 与 ThinkBook 即使名称相近，也可能使用不同的固件接口。`ideapad_laptop` 驱动常见的只读诊断节点包括：
 
 ```text
 /sys/firmware/acpi/platform_profile
@@ -165,7 +165,7 @@ Intel iGPU 可能只有温度，没有独立风扇。此时界面显示温度，
 /sys/bus/acpi/devices/VPC2004:00/physical_node/fan_mode
 ```
 
-实测三种 platform profile 均可安全切换并恢复，但 `fan_mode` 在写入内核允许的值 `4` 后仍读回 `133`，也没有 RPM 可用于验证。因此程序只显示该风扇由固件管理，不把 profile 或 fan_mode 误报为“满速”。
+`platform_profile` 描述整机性能策略，不等同于风扇占空比。部分固件的 `fan_mode` 读回值也不对应写入值，并且没有 RPM 可供校验。因此程序只报告固件管理状态，不把 profile 或 fan_mode 推断为“满速”。
 
 ThinkPad 与 ThinkBook/IdeaPad 不使用同一控制接口。真正的 ThinkPad 若提供 `/proc/acpi/ibm/fan`，程序只在内核模块已经明确开启 `fan_control=1` 时使用 `level auto`、`level 1..7` 和驱动列出的 `full-speed`。
 
@@ -220,12 +220,12 @@ sudo apt remove linux-thermal-control
 
 服务停止和卸载脚本都会尝试恢复自动模式，但固件行为因硬件而异；卸载后应观察风扇转速是否重新由 BIOS/驱动调节。
 
-## 首次安装后 GUI 显示“服务未连接”
+### GUI 显示“服务未连接”
 
-从 `0.5.6` 开始，安装脚本会自动执行 systemd manager reload、system D-Bus ReloadConfig，并启动 `linux-thermal-daemon.service`。正常情况下只安装 deb 即可：
+安装脚本会刷新 systemd 与系统 D-Bus 配置，并启动守护进程。正常情况下只需通过 APT 安装本地软件包：
 
 ```bash
-sudo apt install ./linux-thermal-control_0.5.13-6_amd64.deb
+sudo apt install ./linux-thermal-control_VERSION_amd64.deb
 ```
 
 诊断命令：
@@ -236,4 +236,4 @@ journalctl -u linux-thermal-daemon.service -b
 busctl status org.linuxthermal.Control1
 ```
 
-COLORFUL P16 TA 24 若日志曾出现 `Unexpected ACPI response: 0x69alled`，这是旧版本错误删除 NUL 字节后拼接 `acpi_call` 缓冲区残留造成的；`0.5.6` 已在第一个 NUL 字节处截断响应。
+若日志出现 `Unexpected ACPI response`，请确认 `acpi_call` 已正常加载，并检查 `/proc/acpi/call` 是否返回完整响应。守护进程会在首个 NUL 字节处截断内核缓冲区内容，避免把残留字节当成 ACPI 返回值。

@@ -4,6 +4,8 @@
 
 #include <memory>
 
+// 动态加载 NVML 获取 NVIDIA 遥测，并仅在驱动提供完整逐风扇控制 API 时
+// 创建可写区域。NVML 不可用时退回 nvidia-smi 只读查询。
 class NvidiaBackend final : public IFanBackend {
 public:
   NvidiaBackend();
@@ -21,8 +23,8 @@ public:
                                         int percent) override;
 
 private:
-  struct Api;
-  struct Device;
+  struct Api;     // 运行时解析的 NVML 函数表。
+  struct Device;  // 一块 GPU 及其逐风扇运行时状态。
 
   [[nodiscard]] bool probeNvml();
   [[nodiscard]] bool querySmi();

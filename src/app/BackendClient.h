@@ -9,6 +9,9 @@
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 
+// 将特权系统 D-Bus 服务封装为供 QML 使用的单一状态对象。
+// 设备清单与曲线模型在本对象的整个生命周期内均由其持有，因此 QML
+// 可以安全保留这些模型的指针。
 class BackendClient final : public QObject {
   Q_OBJECT
   QML_NAMED_ELEMENT(FanBackend)
@@ -92,16 +95,28 @@ public:
   [[nodiscard]] bool fullSpeedAvailable() const;
   [[nodiscard]] bool customCurveAvailable() const;
 
+  // 请求立即刷新状态，并向 QML 公开刷新进度。
   Q_INVOKABLE void refresh();
+  // 请求切换到 `mode`，并通过 modeRequestFinished() 报告结果。
   Q_INVOKABLE void setMode(const QString &mode);
+  // 返回 `mode` 是否受支持，且当前既未处于该模式也没有待处理操作。
   Q_INVOKABLE bool canSetMode(const QString &mode) const;
+  // 选择 `zoneId`；如果该操作会丢弃未保存的曲线编辑，则返回 false。
   Q_INVOKABLE bool selectZone(const QString &zoneId);
+  // 更新一个本地曲线点，同时保持相邻点的温度与占空比顺序。
   Q_INVOKABLE void setCurvePoint(int row, int temperature, int duty);
+  // 持久化本地编辑，但不改变当前控制模式。
   Q_INVOKABLE void saveCurve();
+  // 持久化本地编辑并启用自定义曲线控制。
   Q_INVOKABLE void applyCurve();
+  // 将所选区域的曲线恢复为软件包提供的默认值。
   Q_INVOKABLE void resetCurve();
+  // 重新加载所选区域，并丢弃未保存的本地编辑。
   Q_INVOKABLE void discardCurveEdits();
   Q_INVOKABLE void clearError();
+
+  // 在用户明确从托盘退出前，同步恢复固件自动控制。如果守护进程未确认
+  // 切换则返回 false；调用方必须保持 GUI 运行，以便用户重试或查看错误。
   [[nodiscard]] bool restoreAutomaticForExit();
 
 signals:
@@ -143,6 +158,7 @@ private:
   QDBusInterface m_interface;
   QTimer m_refreshTimer;
   QVariantMap m_status;
+  // 服务端曲线快照和用户开始编辑时的基线，用于识别并保留并发修改。
   QVariantList m_profiles;
   QVariantList m_curveBaseline;
   int m_selectedCurveRevision = 0;
@@ -155,7 +171,7 @@ private:
   QString m_lastError;
   bool m_connected = false;
   bool m_busy = false;
-  bool m_refreshInFlight = false;
+  bool m_refreshInFlight = false;  // 保证任一时刻只有一个 GetStatus 请求。
   bool m_refreshing = false;
   bool m_curveConflict = false;
 };

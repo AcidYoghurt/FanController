@@ -5,6 +5,8 @@
 #include <QHash>
 #include <QSet>
 
+// 从 Linux thermal_zone 接口补充只读温度。
+// `acceptedKinds` 用于避免与已有 hwmon CPU/GPU 传感器重复。
 class ThermalZoneBackend final : public IFanBackend {
 public:
   explicit ThermalZoneBackend(

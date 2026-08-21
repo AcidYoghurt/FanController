@@ -79,9 +79,9 @@ QList<Thermal::FanDevice>
 ClevoBackend::verifiedFanDevices(const QString &acpiRoot) {
   const QString controllerId = QStringLiteral("clevo:CLV0001");
   QList<Thermal::FanDevice> fans;
-  // COLORFUL P16 TA 24 has two physical blowers. The firmware also exposes
-  // TFN3 (permanently 0 RPM) and TFN4 (a duplicate of TFN2); neither is an
-  // additional fan and advertising them creates false failure telemetry.
+  // 已验证机型只有两只物理风扇。固件同时公开了转速恒为 0 的 TFN3 和
+  // 与 TFN2 重复的 TFN4；二者都不是额外风扇，公开它们会产生错误的故障
+  // 遥测。
   for (int index = 0; index < 2; ++index) {
     const auto id = QStringLiteral("%1:fan%2").arg(controllerId).arg(index);
     const auto rpm = readInteger(
@@ -114,10 +114,9 @@ quint32 ClevoBackend::packedDutyPayload(int percent) {
   percent = qBound(40, percent, 100);
   const auto raw = static_cast<quint32>(
       qRound(static_cast<double>(percent) * 255.0 / 100.0));
-  // WMBB method 0x68 accepts one duty byte per EC fan slot. Using
-  // 0xffffffXX drives the other slots at 100%, which made the GPU blower jump
-  // between its curve speed and full speed. Mirror the requested duty to all
-  // slots; TFN3 is unused and TFN4 aliases the second physical blower.
+  // WMBB 方法 0x68 为每个 EC 风扇槽接收一个占空比字节。0xffffffXX 会
+  // 把其余槽位设为 100%，导致 GPU 风扇在曲线转速与满速间跳变。这里把
+  // 请求值复制到全部槽位；TFN3 未使用，TFN4 是第二只物理风扇的别名。
   return raw * 0x01010101u;
 }
 
@@ -259,6 +258,8 @@ Thermal::Result ClevoBackend::setDuty(const QString &zoneId, int percent) {
                      "0x68");
   if (!result.success)
     return result;
+  // 0x68 只写目标值，随后还要用 0x69 保持两只物理风扇处于手动模式。
+  // 掩码仅把未使用的 EC 槽位交还固件。
   const auto autoMaskText =
       QByteArrayLiteral("0x") +
       QByteArray::number(unusedFanAutoMask(), 16).rightJustified(8, '0');

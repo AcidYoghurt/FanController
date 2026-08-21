@@ -90,6 +90,8 @@ void TrayController::hideWindow() {
 void TrayController::quitApplication() {
   if (m_quitRequested)
     return;
+  // 安全回调会进入 D-Bus 事件循环。先屏蔽重复点击，避免并发发送两次恢复
+  // 命令或重复调用 QApplication::quit()。
   m_quitRequested = true;
   m_quitAction->setEnabled(false);
   if (m_quitPreparation && !m_quitPreparation()) {

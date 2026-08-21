@@ -33,7 +33,7 @@ amdgpu、i915、nouveau、thinkpad、dell_smm、asus、nct6775 等
 ## 2. 安装与启动
 
 ```bash
-sudo apt install ./dist/linux-thermal-control_0.5.13-2_amd64.deb
+sudo apt install ./dist/linux-thermal-control_0.5.13-3_amd64.deb
 sudo systemctl enable --now linux-thermal-daemon.service
 systemctl status linux-thermal-daemon.service
 journalctl -u linux-thermal-daemon.service -b
@@ -63,7 +63,9 @@ linux-thermal-control
 - 不再使用 `ConditionPathExists=CLV0001`，因此通用 hwmon 机器也能启动；
 - 安装包强制依赖 `acpi-call-dkms`、`gcc-12`、`mokutil` 和 `shim-signed`，确保 Clevo 专用后端在 Ubuntu 22.04 HWE 内核上能够编译 `acpi_call`，并支持在不关闭 Secure Boot 与 Shim 验证的情况下注册模块签名密钥。
 
-Secure Boot 开启时，若 `/proc/acpi/call` 不存在，运行：
+APT 安装时会自动检查 MOK 注册状态：已经注册时直接加载 `acpi_call`；尚未
+注册时自动启动 Ubuntu 的注册向导。只有在无交互终端等环境中无法启动向导
+时，才需要手动继续：
 
 ```bash
 sudo linux-thermal-secure-boot-setup --prepare
@@ -74,6 +76,9 @@ sudo linux-thermal-secure-boot-setup --prepare
 ```bash
 linux-thermal-secure-boot-setup --status
 ```
+
+图形界面的 Info 页面会在“安全启动状态”下面单独显示“安全启动密钥”，区分
+`已注册`、`等待重启确认`、`未注册`、`尚未生成`和`无法判断`。
 
 重启和查看日志：
 
@@ -220,7 +225,7 @@ sudo apt remove linux-thermal-control
 从 `0.5.6` 开始，安装脚本会自动执行 systemd manager reload、system D-Bus ReloadConfig，并启动 `linux-thermal-daemon.service`。正常情况下只安装 deb 即可：
 
 ```bash
-sudo apt install ./linux-thermal-control_0.5.13-2_amd64.deb
+sudo apt install ./linux-thermal-control_0.5.13-3_amd64.deb
 ```
 
 诊断命令：

@@ -32,6 +32,9 @@ ScrollView {
                 secureBootKnown: root.backend.secureBootKnown
                 secureBootEnabled: root.backend.secureBootEnabled
                 secureBootDisabled: root.backend.secureBootDisabled
+                mokState: root.backend.secureBootMokState
+                mokKnown: root.backend.secureBootMokKnown
+                mokEnrolled: root.backend.secureBootMokEnrolled
             }
 
             FanPanel {

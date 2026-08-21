@@ -1,3 +1,17 @@
+linux-thermal-control (0.5.13-3) unstable; urgency=medium
+
+  * Automatically detect Secure Boot during package configuration, reuse an
+    enrolled Ubuntu DKMS MOK, load acpi_call, or start MOK enrollment when the
+    key still needs physical confirmation.
+  * Automatically rebuild an unsigned or missing acpi_call DKMS module instead
+    of requiring an application-side setup click.
+  * Keep package installation successful in non-interactive environments and
+    print the explicit fallback only when enrollment cannot be queued.
+  * Show the Ubuntu DKMS MOK registration state directly below Secure Boot on
+    the Info page, including pending and not-yet-generated states.
+
+ -- Linux Thermal Control Maintainers <cfys-028@users.noreply.github.com>  Fri, 21 Aug 2026 14:00:00 +0800
+
 linux-thermal-control (0.5.13-2) unstable; urgency=medium
 
   * Treat mokutil's explicit "already enrolled" result as authoritative when

@@ -7,6 +7,10 @@ new_dir=/var/lib/linux-thermal-control
 new_curve=$new_dir/curves.json
 curve_config=/etc/linux-thermal-control/default-fan-curve.yaml
 curve_backup=/etc/linux-thermal-control/.风扇曲线配置.backup
+sysfs_root=${LINUX_THERMAL_SYSFS_ROOT:-/sys}
+proc_root=${LINUX_THERMAL_PROC_ROOT:-/proc}
+mok_dir=${LINUX_THERMAL_MOK_DIR:-/var/lib/shim-signed/mok}
+mok_certificate=$mok_dir/MOK.der
 
 reload_dbus_config() {
   if command -v dbus-send >/dev/null 2>&1 && [ -S /run/dbus/system_bus_socket ]; then
@@ -18,7 +22,7 @@ reload_dbus_config() {
 
 secure_boot_enabled() {
   secure_boot_variable=
-  for candidate in /sys/firmware/efi/efivars/SecureBoot-*; do
+  for candidate in "$sysfs_root"/firmware/efi/efivars/SecureBoot-*; do
     if [ -f "$candidate" ]; then
       secure_boot_variable=$candidate
       break
@@ -26,6 +30,58 @@ secure_boot_enabled() {
   done
   [ -n "$secure_boot_variable" ] || return 1
   [ "$(od -An -t u1 "$secure_boot_variable" 2>/dev/null | awk '{print $NF}')" = 1 ]
+}
+
+mok_is_enrolled() {
+  [ -f "$mok_certificate" ] || return 1
+  enrollment_result=$(mokutil --test-key "$mok_certificate" 2>&1 || true)
+  printf '%s\n' "$enrollment_result" | grep -Fq 'is already enrolled'
+}
+
+mok_enrollment_pending() {
+  [ -n "$(mokutil --list-new 2>/dev/null || true)" ]
+}
+
+print_enrollment_notice() {
+  cat >&2 <<'SECURE_BOOT_PENDING_NOTICE'
+linux-thermal-control: acpi_call has been signed and MOK enrollment is pending.
+Reboot, select Enroll MOK, and enter the temporary password from installation.
+After the next reboot, verify with:
+  linux-thermal-secure-boot-setup --status
+SECURE_BOOT_PENDING_NOTICE
+}
+
+prepare_secure_boot_support() {
+  secure_boot_enabled || return 0
+  command -v mokutil >/dev/null 2>&1 || return 0
+
+  if mok_is_enrolled; then
+    modprobe acpi_call >/dev/null 2>&1 || true
+    return 0
+  fi
+  if mok_enrollment_pending; then
+    print_enrollment_notice
+    return 0
+  fi
+
+  module_signer=$(modinfo -F signer acpi_call 2>/dev/null || true)
+  if [ ! -f "$mok_certificate" ] || [ -z "$module_signer" ]; then
+    echo 'linux-thermal-control: automatically preparing signed acpi_call support.' >&2
+    linux-thermal-secure-boot-setup --prepare || true
+  elif command -v update-secureboot-policy >/dev/null 2>&1; then
+    echo 'linux-thermal-control: starting the Ubuntu MOK enrollment wizard.' >&2
+    update-secureboot-policy --enroll-key || true
+  fi
+
+  if mok_enrollment_pending; then
+    print_enrollment_notice
+  elif ! mok_is_enrolled; then
+    cat >&2 <<'SECURE_BOOT_FALLBACK_NOTICE'
+linux-thermal-control: automatic MOK enrollment could not be queued in this
+installation environment. At the first interactive session, run:
+  sudo linux-thermal-secure-boot-setup --prepare
+SECURE_BOOT_FALLBACK_NOTICE
+  fi
 }
 
 if [ -f "$old_curve" ] && [ ! -e "$new_curve" ]; then
@@ -42,6 +98,8 @@ if command -v deb-systemd-helper >/dev/null 2>&1; then
   deb-systemd-helper enable "$service" >/dev/null || true
 fi
 
+prepare_secure_boot_support
+
 if [ -d /run/systemd/system ]; then
   systemctl daemon-reload >/dev/null 2>&1 || true
   reload_dbus_config
@@ -56,23 +114,14 @@ fi
 update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
 gtk-update-icon-cache -q /usr/share/icons/hicolor >/dev/null 2>&1 || true
 
-if secure_boot_enabled && [ ! -e /proc/acpi/call ]; then
-  if command -v mokutil >/dev/null 2>&1 &&
-      [ -n "$(mokutil --list-new 2>/dev/null || true)" ]; then
-    cat >&2 <<'SECURE_BOOT_PENDING_NOTICE'
-linux-thermal-control: acpi_call was signed and MOK enrollment is pending.
-Reboot, select Enroll MOK, and enter the temporary password from installation.
-After the next reboot, verify with:
-  linux-thermal-secure-boot-setup --status
-SECURE_BOOT_PENDING_NOTICE
-  else
+if secure_boot_enabled && [ ! -e "$proc_root/acpi/call" ] &&
+    ! mok_enrollment_pending; then
     cat >&2 <<'SECURE_BOOT_NOTICE'
 linux-thermal-control: Secure Boot is enabled, but acpi_call is not available.
-Keep Secure Boot and Shim validation enabled, then run:
+The automatic installation step could not finish in this environment. Run:
   sudo linux-thermal-secure-boot-setup --prepare
 After the requested reboot and MOK enrollment, verify with:
   linux-thermal-secure-boot-setup --status
 SECURE_BOOT_NOTICE
-  fi
 fi
 exit 0

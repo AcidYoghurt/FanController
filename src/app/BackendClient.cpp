@@ -97,6 +97,19 @@ bool BackendClient::secureBootEnrollmentRequired() const {
   return secureBootRequirement() == QStringLiteral("enroll-key");
 }
 
+QString BackendClient::secureBootMokState() const {
+  return secureBootMap().value(QStringLiteral("mokState"),
+                               QStringLiteral("unknown")).toString();
+}
+
+bool BackendClient::secureBootMokKnown() const {
+  return secureBootMap().value(QStringLiteral("mokKnown")).toBool();
+}
+
+bool BackendClient::secureBootMokEnrolled() const {
+  return secureBootMap().value(QStringLiteral("mokEnrolled")).toBool();
+}
+
 QString BackendClient::safetyMessage() const {
   if (!safetyOverride())
     return {};

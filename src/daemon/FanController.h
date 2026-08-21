@@ -48,6 +48,9 @@ public:
 
   [[nodiscard]] static Mode modeFromString(QStringView value);
   [[nodiscard]] static QVariantMap detectSecureBoot(QString sysfsRoot = {});
+  [[nodiscard]] static QVariantMap parseMokEnrollmentResult(
+      const QByteArray &testKeyOutput, const QByteArray &pendingOutput,
+      bool certificateExists);
   [[nodiscard]] static QString modeToString(Mode mode);
   [[nodiscard]] static QVariantList defaultCurve();
   [[nodiscard]] static bool validateCurve(const QVariantList &curve,
@@ -85,6 +88,7 @@ private:
   [[nodiscard]] QVariantList curveProfiles() const;
   [[nodiscard]] QString primaryZoneId() const;
   [[nodiscard]] static QVariantList normalizedCurve(const QVariantList &curve);
+  void refreshMokEnrollment();
 
   QTimer m_telemetryTimer;
   std::vector<std::unique_ptr<IFanBackend>> m_backends;
@@ -103,4 +107,7 @@ private:
   QString m_state = QStringLiteral("probing");
   QString m_lastErrorCode;
   QString m_lastError;
+  QString m_mokState = QStringLiteral("unknown");
+  bool m_mokKnown = false;
+  bool m_mokEnrolled = false;
 };

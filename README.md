@@ -82,9 +82,10 @@ Linux Thermal Control  [Control] [Info]
 ```
 
 - `Control`（默认）：CPU/GPU 温度、运行模式、安全告警和自定义风扇曲线；
-- `Info`：安全启动状态、风扇与控制能力、检测到的控制后端。
+- `Info`：安全启动与 MOK 密钥注册状态、风扇与控制能力、检测到的控制后端。
 
-安全启动状态直接读取 EFI `SecureBoot-*` 变量；Info 页面只显示当前状态，不再显示是否需要关闭安全启动的判断与建议。
+安全启动状态直接读取 EFI `SecureBoot-*` 变量；MOK 状态由守护进程核对
+Ubuntu DKMS 公钥是否已注册。Info 页面不会建议关闭 Secure Boot。
 
 ## 系统托盘与退出
 
@@ -116,18 +117,19 @@ GUI 在每个用户桌面会话中只允许一个实例。再次点击应用图�
 软件包输出：
 
 ```text
-dist/linux-thermal-control_0.5.13-2_amd64.deb
+dist/linux-thermal-control_0.5.13-3_amd64.deb
 ```
 
 安装本地 deb 时应使用 APT，让它解析并安装 `acpi-call-dkms`、`mokutil`、
 `shim-signed` 等强制依赖：
 
 ```bash
-sudo apt install ./dist/linux-thermal-control_0.5.13-2_amd64.deb
+sudo apt install ./dist/linux-thermal-control_0.5.13-3_amd64.deb
 ```
 
-若 Secure Boot 已开启但 `acpi_call` 尚未被信任，无需关闭 Secure Boot 或
-Shim 验证。运行下面的助手生成 Ubuntu DKMS MOK、重新签名模块并发起注册：
+安装脚本会自动检查 Secure Boot、生成 Ubuntu DKMS MOK、签名模块并在需要
+时启动注册向导；已有有效 MOK 的机器无需任何额外操作。如果安装运行在无法
+显示注册向导的非交互环境，可使用下面的助手继续：
 
 ```bash
 sudo linux-thermal-secure-boot-setup --prepare

@@ -79,6 +79,9 @@ private slots:
         status().value(QStringLiteral("secureBoot")).toMap();
     QVERIFY(secureBoot.contains(QStringLiteral("state")));
     QVERIFY(secureBoot.contains(QStringLiteral("requirement")));
+    QVERIFY(secureBoot.contains(QStringLiteral("mokState")));
+    QVERIFY(secureBoot.contains(QStringLiteral("mokKnown")));
+    QVERIFY(secureBoot.contains(QStringLiteral("mokEnrolled")));
   }
 
   void allModes() {

@@ -30,6 +30,9 @@ class BackendClient final : public QObject {
   Q_PROPERTY(bool secureBootEnabled READ secureBootEnabled NOTIFY inventoryChanged FINAL)
   Q_PROPERTY(bool secureBootDisabled READ secureBootDisabled NOTIFY inventoryChanged FINAL)
   Q_PROPERTY(bool secureBootEnrollmentRequired READ secureBootEnrollmentRequired NOTIFY inventoryChanged FINAL)
+  Q_PROPERTY(QString secureBootMokState READ secureBootMokState NOTIFY inventoryChanged FINAL)
+  Q_PROPERTY(bool secureBootMokKnown READ secureBootMokKnown NOTIFY inventoryChanged FINAL)
+  Q_PROPERTY(bool secureBootMokEnrolled READ secureBootMokEnrolled NOTIFY inventoryChanged FINAL)
   Q_PROPERTY(SensorListModel *sensors READ sensors CONSTANT FINAL)
   Q_PROPERTY(FanListModel *fans READ fans CONSTANT FINAL)
   Q_PROPERTY(ZoneListModel *zones READ zones CONSTANT FINAL)
@@ -68,6 +71,9 @@ public:
   [[nodiscard]] bool secureBootEnabled() const;
   [[nodiscard]] bool secureBootDisabled() const;
   [[nodiscard]] bool secureBootEnrollmentRequired() const;
+  [[nodiscard]] QString secureBootMokState() const;
+  [[nodiscard]] bool secureBootMokKnown() const;
+  [[nodiscard]] bool secureBootMokEnrolled() const;
   [[nodiscard]] SensorListModel *sensors() { return &m_sensors; }
   [[nodiscard]] FanListModel *fans() { return &m_fans; }
   [[nodiscard]] ZoneListModel *zones() { return &m_zones; }

@@ -87,6 +87,29 @@ private slots:
     QVERIFY(!status.value(QStringLiteral("disabled")).toBool());
   }
 
+  void parsesMokEnrollmentStates() {
+    auto result = FanController::parseMokEnrollmentResult(
+        "MOK.der is already enrolled\n", {}, true);
+    QCOMPARE(result.value(QStringLiteral("state")).toString(),
+             QStringLiteral("enrolled"));
+    QVERIFY(result.value(QStringLiteral("enrolled")).toBool());
+
+    result = FanController::parseMokEnrollmentResult(
+        "MOK.der is not enrolled\n", "pending certificate", true);
+    QCOMPARE(result.value(QStringLiteral("state")).toString(),
+             QStringLiteral("pending"));
+    QVERIFY(!result.value(QStringLiteral("enrolled")).toBool());
+
+    result = FanController::parseMokEnrollmentResult(
+        "MOK.der is not enrolled\n", {}, true);
+    QCOMPARE(result.value(QStringLiteral("state")).toString(),
+             QStringLiteral("not-enrolled"));
+
+    result = FanController::parseMokEnrollmentResult({}, {}, false);
+    QCOMPARE(result.value(QStringLiteral("state")).toString(),
+             QStringLiteral("not-generated"));
+  }
+
   void secureBootRequiresKeyEnrollmentOnVerifiedClevoHardware() {
     QTemporaryDir sysfs;
     QTemporaryDir proc;

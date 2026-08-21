@@ -18,6 +18,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QProcess>
 #include <QSaveFile>
 #include <QtMath>
 
@@ -102,6 +103,7 @@ bool FanController::initialize(QString *error) {
   m_backends.clear();
   m_mockBackend = nullptr;
   m_state = QStringLiteral("probing");
+  refreshMokEnrollment();
 
   if (m_mockMode) {
     auto backend = std::make_unique<MockBackend>();
@@ -550,6 +552,65 @@ QVariantMap FanController::detectSecureBoot(QString sysfsRoot) {
           {QStringLiteral("disabled"), !enabled}};
 }
 
+QVariantMap FanController::parseMokEnrollmentResult(
+    const QByteArray &testKeyOutput, const QByteArray &pendingOutput,
+    bool certificateExists) {
+  if (!certificateExists) {
+    return {{QStringLiteral("state"), QStringLiteral("not-generated")},
+            {QStringLiteral("known"), true},
+            {QStringLiteral("enrolled"), false}};
+  }
+  if (testKeyOutput.contains("is already enrolled")) {
+    return {{QStringLiteral("state"), QStringLiteral("enrolled")},
+            {QStringLiteral("known"), true},
+            {QStringLiteral("enrolled"), true}};
+  }
+  if (!pendingOutput.trimmed().isEmpty()) {
+    return {{QStringLiteral("state"), QStringLiteral("pending")},
+            {QStringLiteral("known"), true},
+            {QStringLiteral("enrolled"), false}};
+  }
+  if (testKeyOutput.contains("is not enrolled")) {
+    return {{QStringLiteral("state"), QStringLiteral("not-enrolled")},
+            {QStringLiteral("known"), true},
+            {QStringLiteral("enrolled"), false}};
+  }
+  return {{QStringLiteral("state"), QStringLiteral("unknown")},
+          {QStringLiteral("known"), false},
+          {QStringLiteral("enrolled"), false}};
+}
+
+void FanController::refreshMokEnrollment() {
+  if (m_mockMode)
+    return;
+
+  const auto certificate = qEnvironmentVariable(
+      "THERMAL_CONTROL_MOK_CERTIFICATE",
+      QStringLiteral("/var/lib/shim-signed/mok/MOK.der"));
+  QByteArray testKeyOutput;
+  QByteArray pendingOutput;
+  if (QFileInfo::exists(certificate)) {
+    QProcess testKey;
+    testKey.start(QStringLiteral("/usr/bin/mokutil"),
+                  {QStringLiteral("--test-key"), certificate});
+    if (testKey.waitForFinished(5000))
+      testKeyOutput =
+          testKey.readAllStandardOutput() + testKey.readAllStandardError();
+
+    QProcess pending;
+    pending.start(QStringLiteral("/usr/bin/mokutil"),
+                  {QStringLiteral("--list-new")});
+    if (pending.waitForFinished(5000) && pending.exitCode() == 0)
+      pendingOutput = pending.readAllStandardOutput();
+  }
+
+  const auto result = parseMokEnrollmentResult(
+      testKeyOutput, pendingOutput, QFileInfo::exists(certificate));
+  m_mokState = result.value(QStringLiteral("state")).toString();
+  m_mokKnown = result.value(QStringLiteral("known")).toBool();
+  m_mokEnrolled = result.value(QStringLiteral("enrolled")).toBool();
+}
+
 QVariantMap FanController::status() const {
   const auto sysfsRoot = qEnvironmentVariable(
       "THERMAL_CONTROL_SYSFS_ROOT", QStringLiteral("/sys"));
@@ -570,6 +631,9 @@ QVariantMap FanController::status() const {
   secureBoot.insert(QStringLiteral("requirement"), requirement);
   secureBoot.insert(QStringLiteral("clevoRelevant"), clevoRelevant);
   secureBoot.insert(QStringLiteral("acpiCallAvailable"), acpiCallAvailable);
+  secureBoot.insert(QStringLiteral("mokState"), m_mokState);
+  secureBoot.insert(QStringLiteral("mokKnown"), m_mokKnown);
+  secureBoot.insert(QStringLiteral("mokEnrolled"), m_mokEnrolled);
 
   QVariantList sensorMaps;
   for (const auto &sensor : sensors())

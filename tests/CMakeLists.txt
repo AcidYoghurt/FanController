@@ -201,3 +201,57 @@ add_test(NAME linux-thermal-dbus-integration-tests
             $<TARGET_FILE:linux-thermal-daemon>
             $<TARGET_FILE:linux-thermal-dbus-tests>
 )
+
+qt_add_executable(linux-thermal-ui-tests
+    app/UiTestMain.cpp
+)
+
+target_link_libraries(linux-thermal-ui-tests PRIVATE
+    Qt6::QuickTest
+    LinuxThermalControl::Ui
+    linux-thermal-uiplugin
+    LinuxThermalControl::Client
+    linux-thermal-clientplugin
+)
+
+target_compile_definitions(linux-thermal-ui-tests PRIVATE
+    QUICK_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/qml"
+)
+
+add_test(NAME linux-thermal-ui-tests COMMAND linux-thermal-ui-tests)
+set_tests_properties(linux-thermal-ui-tests PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+)
+
+add_test(NAME linux-thermal-page-navigation-tests
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/run-mock-dbus-test.sh
+            $<TARGET_FILE:linux-thermal-daemon>
+            $<TARGET_FILE:linux-thermal-control> --test-page-navigation
+)
+add_test(NAME linux-thermal-tray-lifecycle-tests
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/integration/run-mock-dbus-test.sh
+            $<TARGET_FILE:linux-thermal-daemon>
+            $<TARGET_FILE:linux-thermal-control> --test-tray-lifecycle
+)
+set_tests_properties(linux-thermal-page-navigation-tests linux-thermal-tray-lifecycle-tests
+    PROPERTIES
+        TIMEOUT 15
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software;LINUX_THERMAL_FORCE_TRAY_FOR_TESTS=1"
+)
+
+qt_add_executable(linux-thermal-ui-preview
+    app/UiPreview.cpp
+    app/UiMotionCapture.cpp
+    app/UiMotionCapture.h
+)
+
+target_link_libraries(linux-thermal-ui-preview PRIVATE
+    Qt6::Test
+    Qt6::Gui
+    Qt6::Quick
+    Qt6::QuickControls2
+    LinuxThermalControl::Ui
+    linux-thermal-uiplugin
+    LinuxThermalControl::Client
+    linux-thermal-clientplugin
+)

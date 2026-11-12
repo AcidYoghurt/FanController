@@ -1,43 +1,44 @@
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls
 import LinuxThermal.Control
+import LinuxThermal.Backend
 
 ApplicationWindow {
     id: window
     width: 1120
-    height: 780
+    height: Math.min(900, Screen.desktopAvailableHeight - 80)
     minimumWidth: 760
     minimumHeight: 620
     visible: true
     title: qsTr("Linux Thermal Control")
     color: Theme.window
 
-    property string displayedError: ""
-    property int currentPage: 0
-    property bool modeTransitioning: false
-    property string pendingMode: ""
-    property bool modeReplyFinished: false
-    property bool modeRequestSucceeded: false
+    font.pixelSize: Theme.bodySize
+    palette.window: Theme.window
+    palette.windowText: Theme.text
+    palette.base: Theme.inset
+    palette.alternateBase: Theme.panelHover
+    palette.text: Theme.text
+    palette.button: Theme.panel
+    palette.buttonText: Theme.text
+    palette.highlight: Theme.accent
+    palette.highlightedText: Theme.accentForeground
+    palette.mid: Theme.borderStrong
+    palette.dark: Theme.border
+    palette.light: Theme.panelHover
 
-    function finishModeTransitionIfReady() {
-        if (modeTransitioning && !modeExitDelay.running && modeReplyFinished
-                && (!modeRequestSucceeded || FanBackend.mode === pendingMode)) {
-            modeTransitioning = false
-            pendingMode = ""
-        }
-    }
+    property alias currentPage: controller.currentPage
 
-    Timer {
-        id: modeExitDelay
-        interval: Theme.animationFast
-        onTriggered: window.finishModeTransitionIfReady()
+    AppController {
+        id: controller
+        backend: FanBackend
+        onErrorRaised: operationError.open()
     }
 
     header: AppHeader {
         connected: FanBackend.connected
-        busy: FanBackend.busy && !window.modeTransitioning
+        busy: FanBackend.busy && !controller.modeTransitioning
         refreshing: FanBackend.refreshing
-        backendState: FanBackend.state
         systemName: FanBackend.systemName
         currentPage: window.currentPage
         navigationEnabled: !dashboard.busy
@@ -50,21 +51,9 @@ ApplicationWindow {
         anchors.fill: parent
         backend: FanBackend
         currentPage: window.currentPage
-        modeTransitioning: window.modeTransitioning
-        onModeRequested: mode => {
-            if (FanBackend.canSetMode(mode)) {
-                window.pendingMode = mode
-                window.modeReplyFinished = false
-                window.modeRequestSucceeded = false
-                window.modeTransitioning = true
-                modeExitDelay.restart()
-                FanBackend.setMode(mode)
-            }
-        }
-        onEditedCurveApplyRequested: {
-            if (FanBackend.connected && !FanBackend.busy && FanBackend.curveSupported)
-                FanBackend.applyCurve()
-        }
+        modeTransitioning: controller.modeTransitioning
+        onModeRequested: mode => controller.requestMode(mode)
+        onEditedCurveApplyRequested: controller.applyEditedCurve()
     }
 
     footer: AppFooter {
@@ -81,34 +70,7 @@ ApplicationWindow {
     OperationErrorDialog {
         id: operationError
         anchors.centerIn: parent
-        errorMessage: window.displayedError
-        onDismissed: message => {
-            if (FanBackend.lastError === message)
-                FanBackend.clearError()
-            window.displayedError = ""
-        }
-    }
-
-    Connections {
-        target: FanBackend
-
-        function onModeChanged() {
-            window.finishModeTransitionIfReady()
-        }
-
-        function onModeRequestFinished(success, mode) {
-            if (!window.modeTransitioning || mode !== window.pendingMode)
-                return
-            window.modeReplyFinished = true
-            window.modeRequestSucceeded = success
-            window.finishModeTransitionIfReady()
-        }
-
-        function onLastErrorChanged() {
-            if (FanBackend.lastError.length > 0) {
-                window.displayedError = FanBackend.lastError
-                operationError.open()
-            }
-        }
+        errorMessage: controller.displayedError
+        onDismissed: message => controller.dismissError(message)
     }
 }

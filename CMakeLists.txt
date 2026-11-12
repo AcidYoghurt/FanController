@@ -25,7 +25,7 @@ qt_standard_project_setup(REQUIRES 6.11.2)
 
 include(CTest)
 if(BUILD_TESTING)
-    find_package(Qt6 6.11.2 REQUIRED COMPONENTS Test)
+    find_package(Qt6 6.11.2 REQUIRED COMPONENTS Test QuickTest)
 endif()
 
 add_subdirectory(src/common)

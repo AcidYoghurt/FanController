@@ -47,7 +47,7 @@ Panel {
                     Layout.fillWidth: true
                     text: qsTr("安全启动")
                     color: Theme.text
-                    font.pixelSize: 18
+                    font.pixelSize: Theme.headingSize
                     font.weight: Font.DemiBold
                     textFormat: Text.PlainText
                 }
@@ -55,7 +55,7 @@ Panel {
                     Layout.fillWidth: true
                     text: qsTr("显示当前系统的 Secure Boot 状态。")
                     color: Theme.muted
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.captionSize
                     wrapMode: Text.WordWrap
                     textFormat: Text.PlainText
                 }
@@ -84,7 +84,7 @@ Panel {
                 Text {
                     text: qsTr("安全启动状态")
                     color: Theme.muted
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.captionSize
                     font.weight: Font.DemiBold
                     textFormat: Text.PlainText
                 }
@@ -92,7 +92,7 @@ Panel {
                     Layout.fillWidth: true
                     text: root.stateText
                     color: root.stateColor
-                    font.pixelSize: 17
+                    font.pixelSize: Theme.bodySize
                     font.weight: Font.DemiBold
                     wrapMode: Text.WordWrap
                     textFormat: Text.PlainText
@@ -107,7 +107,7 @@ Panel {
                 Text {
                     text: qsTr("安全启动密钥")
                     color: Theme.muted
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.captionSize
                     font.weight: Font.DemiBold
                     textFormat: Text.PlainText
                 }
@@ -115,7 +115,7 @@ Panel {
                     Layout.fillWidth: true
                     text: root.mokText
                     color: root.mokColor
-                    font.pixelSize: 17
+                    font.pixelSize: Theme.bodySize
                     font.weight: Font.DemiBold
                     wrapMode: Text.WordWrap
                     textFormat: Text.PlainText

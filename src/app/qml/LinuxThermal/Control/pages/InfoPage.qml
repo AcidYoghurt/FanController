@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls
 import QtQuick.Layouts
 
 ScrollView {
@@ -15,7 +15,15 @@ ScrollView {
         width: root.availableWidth
         spacing: Theme.sectionSpacing
 
-        Item { implicitHeight: 4 }
+        PageHeading {
+            Layout.fillWidth: true
+            Layout.topMargin: 8
+            Layout.leftMargin: Theme.pageMargin
+            Layout.rightMargin: Theme.pageMargin
+            title: qsTr("设备与安全")
+            description: qsTr("检查设备能力、驱动后端与安全启动状态。")
+            label: "SYSTEM / DETAILS"
+        }
 
         GridLayout {
             Layout.fillWidth: true
@@ -26,6 +34,8 @@ ScrollView {
             rowSpacing: 20
 
             SecureBootPanel {
+                entryDelay: 40
+                viewport: root.contentItem
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignTop
                 secureBootState: root.backend.secureBootState
@@ -38,6 +48,8 @@ ScrollView {
             }
 
             FanPanel {
+                entryDelay: 120
+                viewport: root.contentItem
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignTop
                 fanModel: root.backend.fans
@@ -45,6 +57,8 @@ ScrollView {
         }
 
         BackendPanel {
+            entryDelay: 200
+            viewport: root.contentItem
             Layout.fillWidth: true
             Layout.leftMargin: Theme.pageMargin
             Layout.rightMargin: Theme.pageMargin

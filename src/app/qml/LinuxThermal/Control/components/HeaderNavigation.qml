@@ -1,99 +1,78 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
 Rectangle {
     id: root
-
     required property int currentIndex
     property bool navigationEnabled: true
     signal pageRequested(int index)
-
-    implicitWidth: navigationRow.implicitWidth + 8
-    implicitHeight: 40
-    radius: 14
-    color: Theme.window
+    implicitWidth: 204
+    implicitHeight: 42
+    radius: Theme.controlRadius
+    color: Theme.inset
     border.color: Theme.border
-    border.width: 1
 
+    Rectangle {
+        objectName: "navigationIndicator"
+        x: 4 + root.currentIndex * (width + 4)
+        y: 4
+        width: (root.width - 12) / 2
+        height: root.height - 8
+        radius: 7
+        color: Theme.panel
+        border.color: Theme.border
+        Behavior on x { NumberAnimation { duration: Theme.animationMedium; easing.type: Easing.OutCubic } }
+    }
+
+    component NavigationButton: Button {
+        id: button
+        required property int pageIndex
+        readonly property bool selected: root.currentIndex === pageIndex
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        padding: 0
+        enabled: root.navigationEnabled
+        hoverEnabled: true
+        scale: down ? 0.95 : 1
+        Behavior on scale { NumberAnimation { duration: Theme.animationFast; easing.type: Easing.OutCubic } }
+        Accessible.role: Accessible.PageTab
+        Accessible.selected: selected
+        onClicked: { if (!selected) root.pageRequested(pageIndex) }
+        background: Rectangle {
+            radius: 7
+            color: !button.selected && button.hovered ? Theme.panelHover : "transparent"
+            border.color: button.visualFocus ? Theme.accent : Theme.border
+            border.width: button.visualFocus ? 2 : 0
+        }
+        contentItem: Text {
+            text: button.text
+            color: button.selected ? Theme.text : Theme.muted
+            Behavior on color { ColorAnimation { duration: Theme.animationMedium } }
+            font.pixelSize: Theme.captionSize
+            font.weight: button.selected ? Font.Medium : Font.Normal
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            textFormat: Text.PlainText
+        }
+        HoverHandler { cursorShape: button.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
+    }
     RowLayout {
-        id: navigationRow
         anchors.fill: parent
         anchors.margins: 4
         spacing: 4
-
-        Button {
-            id: controlButton
-
+        NavigationButton {
             objectName: "controlNavigationButton"
-            readonly property bool selected: root.currentIndex === 0
-            text: qsTr("Control")
-            padding: 0
-            Layout.preferredWidth: 88
-            Layout.fillHeight: true
-            enabled: root.navigationEnabled
-            Accessible.name: qsTr("Control 页面")
-            Accessible.description: qsTr("查看温度、运行模式和自定义风扇曲线")
-            onClicked: {
-                if (!selected)
-                    root.pageRequested(0)
-            }
-
-            background: Rectangle {
-                radius: 10
-                color: controlButton.selected
-                       ? Qt.alpha(Theme.accent, Theme.dark ? 0.22 : 0.12)
-                       : controlButton.hovered ? Theme.panelHover : "transparent"
-                border.width: controlButton.selected ? 1 : 0
-                border.color: Theme.accent
-            }
-
-            contentItem: Text {
-                text: controlButton.text
-                color: controlButton.selected ? Theme.accent : Theme.muted
-                font.pixelSize: 12
-                font.weight: controlButton.selected ? Font.DemiBold : Font.Medium
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                textFormat: Text.PlainText
-            }
+            pageIndex: 0
+            text: qsTr("散热控制")
+            Accessible.name: qsTr("散热控制页面")
         }
-
-        Button {
-            id: infoButton
-
+        NavigationButton {
             objectName: "infoNavigationButton"
-            readonly property bool selected: root.currentIndex === 1
-            text: qsTr("Info")
-            padding: 0
-            Layout.preferredWidth: 68
-            Layout.fillHeight: true
-            enabled: root.navigationEnabled
-            Accessible.name: qsTr("Info 页面")
-            Accessible.description: qsTr("查看安全启动、风扇能力和控制后端")
-            onClicked: {
-                if (!selected)
-                    root.pageRequested(1)
-            }
-
-            background: Rectangle {
-                radius: 10
-                color: infoButton.selected
-                       ? Qt.alpha(Theme.cool, Theme.dark ? 0.22 : 0.12)
-                       : infoButton.hovered ? Theme.panelHover : "transparent"
-                border.width: infoButton.selected ? 1 : 0
-                border.color: Theme.cool
-            }
-
-            contentItem: Text {
-                text: infoButton.text
-                color: infoButton.selected ? Theme.cool : Theme.muted
-                font.pixelSize: 12
-                font.weight: infoButton.selected ? Font.DemiBold : Font.Medium
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                textFormat: Text.PlainText
-            }
+            pageIndex: 1
+            text: qsTr("设备信息")
+            Accessible.name: qsTr("设备信息页面")
         }
     }
 }

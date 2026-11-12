@@ -21,7 +21,8 @@ exec dbus-run-session -- bash -c '
     if dbus-send --bus="${DBUS_SYSTEM_BUS_ADDRESS}" --print-reply \
         --dest=org.linuxthermal.Control1 /org/linuxthermal/Control1 \
         org.linuxthermal.Control1.GetVersion >/dev/null 2>&1; then
-      exec "$2"
+      "${@:2}"
+      exit 0
     fi
     kill -0 "${daemon_pid}" >/dev/null 2>&1 || {
       cat /tmp/linux-thermal-mock-test-daemon.log >&2
@@ -31,4 +32,4 @@ exec dbus-run-session -- bash -c '
   done
   echo "mock daemon did not acquire D-Bus name" >&2
   exit 1
-' bash "${daemon}" "${test_binary}"
+' bash "${daemon}" "${test_binary}" "${@:3}"

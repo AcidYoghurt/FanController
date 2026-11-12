@@ -12,8 +12,8 @@ Rectangle {
         anchors.fill: parent
         anchors.leftMargin: Theme.pageMargin
         anchors.rightMargin: Theme.pageMargin
-        Text { text: qsTr("守护进程 %1").arg(root.version || "--"); color: Theme.subtle; font.pixelSize: 11; textFormat: Text.PlainText }
+        Text { text: qsTr("守护进程 %1").arg(root.version || "--"); color: Theme.subtle; font.pixelSize: Theme.captionSize; textFormat: Text.PlainText }
         Item { Layout.fillWidth: true }
-        Text { text: qsTr("已检测 %1 个后端").arg(root.backendCount); color: Theme.subtle; font.pixelSize: 11; textFormat: Text.PlainText }
+        Text { text: qsTr("已检测 %1 个后端").arg(root.backendCount); color: Theme.subtle; font.pixelSize: Theme.captionSize; textFormat: Text.PlainText }
     }
 }

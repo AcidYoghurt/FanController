@@ -13,7 +13,7 @@ Panel {
         Text {
             text: qsTr("检测到的控制后端")
             color: Theme.text
-            font.pixelSize: 18
+            font.pixelSize: Theme.headingSize
             font.weight: Font.DemiBold
             textFormat: Text.PlainText
         }
@@ -22,7 +22,7 @@ Panel {
             Layout.fillWidth: true
             text: qsTr("后端按硬件能力自动加载。只读表示可以识别或读取，但不会执行未经验证的写入。");
             color: Theme.muted
-            font.pixelSize: 12
+            font.pixelSize: Theme.captionSize
             wrapMode: Text.WordWrap
             textFormat: Text.PlainText
         }
@@ -66,7 +66,7 @@ Panel {
                                 Layout.fillWidth: true
                                 text: backendRow.displayName
                                 color: Theme.text
-                                font.pixelSize: 13
+                                font.pixelSize: Theme.captionSize
                                 font.weight: Font.DemiBold
                                 elide: Text.ElideRight
                                 textFormat: Text.PlainText
@@ -75,7 +75,7 @@ Panel {
                                 Layout.fillWidth: true
                                 text: backendRow.driver
                                 color: Theme.subtle
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.captionSize
                                 font.family: "monospace"
                                 elide: Text.ElideRight
                                 textFormat: Text.PlainText
@@ -99,7 +99,7 @@ Panel {
                                 color: backendRow.controllable ? Theme.success
                                        : backendRow.telemetryOnly ? Theme.warning
                                        : Theme.subtle
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.captionSize
                                 font.weight: Font.DemiBold
                                 textFormat: Text.PlainText
                             }
@@ -110,7 +110,7 @@ Panel {
                         Layout.fillWidth: true
                         text: backendRow.detail
                         color: Theme.muted
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.captionSize
                         wrapMode: Text.WordWrap
                         textFormat: Text.PlainText
                     }
@@ -120,25 +120,25 @@ Panel {
                         Text {
                             text: backendRow.capabilities.telemetry ? qsTr("遥测 ✓") : qsTr("遥测 —")
                             color: backendRow.capabilities.telemetry ? Theme.cool : Theme.subtle
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.captionSize
                             textFormat: Text.PlainText
                         }
                         Text {
                             text: backendRow.capabilities.automatic ? qsTr("自动 ✓") : qsTr("自动 —")
                             color: backendRow.capabilities.automatic ? Theme.success : Theme.subtle
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.captionSize
                             textFormat: Text.PlainText
                         }
                         Text {
                             text: backendRow.capabilities.fullSpeed ? qsTr("满速 ✓") : qsTr("满速 —")
                             color: backendRow.capabilities.fullSpeed ? Theme.accent : Theme.subtle
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.captionSize
                             textFormat: Text.PlainText
                         }
                         Text {
                             text: backendRow.capabilities.customCurve ? qsTr("曲线 ✓") : qsTr("曲线 —")
                             color: backendRow.capabilities.customCurve ? Theme.warning : Theme.subtle
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.captionSize
                             textFormat: Text.PlainText
                         }
                     }

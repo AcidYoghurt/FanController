@@ -12,6 +12,8 @@ Dialog {
     title: qsTr("操作失败")
     onClosed: dismissed(errorMessage)
 
+    background: Rectangle { color: Theme.panel; radius: Theme.cardRadius; border.color: Theme.borderStrong }
+
     contentItem: ScrollView {
         id: errorScroll
         clip: true
@@ -25,7 +27,7 @@ Dialog {
     }
 
     footer: DialogButtonBox {
-        Button { text: qsTr("关闭"); DialogButtonBox.buttonRole: DialogButtonBox.RejectRole }
+        ActionButton { text: qsTr("关闭"); DialogButtonBox.buttonRole: DialogButtonBox.RejectRole }
         onRejected: root.reject()
     }
 }

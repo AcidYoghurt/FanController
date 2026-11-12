@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls
 import QtQuick.Layouts
 
 ScrollView {
@@ -18,7 +18,15 @@ ScrollView {
         width: root.availableWidth
         spacing: Theme.sectionSpacing
 
-        Item { implicitHeight: 4 }
+        PageHeading {
+            Layout.fillWidth: true
+            Layout.topMargin: 8
+            Layout.leftMargin: Theme.pageMargin
+            Layout.rightMargin: Theme.pageMargin
+            title: qsTr("散热概览")
+            description: qsTr("温度、运行策略与风扇曲线，尽在掌握。")
+            label: "THERMAL / CONTROL"
+        }
 
         CapabilityBanner {
             Layout.fillWidth: true
@@ -38,6 +46,7 @@ ScrollView {
         }
 
         MetricOverview {
+            viewport: root.contentItem
             Layout.fillWidth: true
             Layout.leftMargin: Theme.pageMargin
             Layout.rightMargin: Theme.pageMargin
@@ -48,6 +57,8 @@ ScrollView {
         }
 
         ModePanel {
+            entryDelay: 140
+            viewport: root.contentItem
             Layout.fillWidth: true
             Layout.leftMargin: Theme.pageMargin
             Layout.rightMargin: Theme.pageMargin
@@ -64,6 +75,8 @@ ScrollView {
         }
 
         CurveEditor {
+            entryDelay: 220
+            viewport: root.contentItem
             id: curveEditor
             Layout.fillWidth: true
             Layout.leftMargin: Theme.pageMargin

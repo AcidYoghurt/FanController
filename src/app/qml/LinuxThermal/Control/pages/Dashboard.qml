@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls
 
 StackView {
     id: root
@@ -56,20 +56,20 @@ StackView {
         SequentialAnimation {
             PropertyAction { property: "x"; value: root.slideDistance }
             PropertyAction { property: "opacity"; value: 0 }
-            PauseAnimation { duration: 140 }
+            PauseAnimation { duration: Theme.animationFast }
             ParallelAnimation {
                 NumberAnimation {
                     property: "x"
                     from: root.slideDistance
                     to: 0
-                    duration: 200
+                    duration: Theme.animationMedium
                     easing.type: Easing.OutCubic
                 }
                 NumberAnimation {
                     property: "opacity"
                     from: 0
                     to: 1
-                    duration: 200
+                    duration: Theme.animationMedium
                     easing.type: Easing.OutCubic
                 }
             }
@@ -83,18 +83,18 @@ StackView {
                     property: "x"
                     from: 0
                     to: -root.slideDistance * 0.55
-                    duration: 140
+                    duration: Theme.animationFast
                     easing.type: Easing.InCubic
                 }
                 NumberAnimation {
                     property: "opacity"
                     from: 1
                     to: 0
-                    duration: 140
+                    duration: Theme.animationFast
                     easing.type: Easing.InCubic
                 }
             }
-            PauseAnimation { duration: 200 }
+            PauseAnimation { duration: Theme.animationMedium }
         }
     }
 
@@ -102,20 +102,20 @@ StackView {
         SequentialAnimation {
             PropertyAction { property: "x"; value: -root.slideDistance }
             PropertyAction { property: "opacity"; value: 0 }
-            PauseAnimation { duration: 140 }
+            PauseAnimation { duration: Theme.animationFast }
             ParallelAnimation {
                 NumberAnimation {
                     property: "x"
                     from: -root.slideDistance
                     to: 0
-                    duration: 200
+                    duration: Theme.animationMedium
                     easing.type: Easing.OutCubic
                 }
                 NumberAnimation {
                     property: "opacity"
                     from: 0
                     to: 1
-                    duration: 200
+                    duration: Theme.animationMedium
                     easing.type: Easing.OutCubic
                 }
             }
@@ -129,18 +129,18 @@ StackView {
                     property: "x"
                     from: 0
                     to: root.slideDistance * 0.55
-                    duration: 140
+                    duration: Theme.animationFast
                     easing.type: Easing.InCubic
                 }
                 NumberAnimation {
                     property: "opacity"
                     from: 1
                     to: 0
-                    duration: 140
+                    duration: Theme.animationFast
                     easing.type: Easing.InCubic
                 }
             }
-            PauseAnimation { duration: 200 }
+            PauseAnimation { duration: Theme.animationMedium }
         }
     }
 

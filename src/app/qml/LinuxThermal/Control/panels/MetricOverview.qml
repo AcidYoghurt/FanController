@@ -5,14 +5,18 @@ import QtQuick.Layouts
 GridLayout {
     id: root
     required property var sensorModel
+    property var viewport: null
     property real cpuControlTemperature: -1
-    columns: width >= 900 ? 3 : width >= 560 ? 2 : 1
+    columns: width >= 560 ? 2 : 1
     columnSpacing: 14
     rowSpacing: 14
 
     Repeater {
         model: root.sensorModel
         delegate: MetricCard {
+            required property int index
+            entryDelay: Math.min(index * 80, 240)
+            viewport: root.viewport
             required property string displayName
             required property string deviceKind
             required property real temperature
@@ -24,6 +28,7 @@ GridLayout {
             Layout.fillWidth: true
             title: deviceKind === "cpu" ? qsTr("CPU 温度") : qsTr("GPU 温度")
             value: available ? Number(shownTemperature).toLocaleString(Qt.locale(), "f", 1) : "--"
+            levelTemperature: available ? shownTemperature : -1
             suffix: "°C"
             caption: deviceKind === "cpu" && root.cpuControlTemperature >= 0
                      ? qsTr("%1 · 8 秒控制平均值").arg(displayName)
@@ -35,6 +40,7 @@ GridLayout {
     }
 
     MetricCard {
+        viewport: root.viewport
         visible: root.sensorModel.count === 0
         Layout.fillWidth: true
         title: qsTr("温度传感器")

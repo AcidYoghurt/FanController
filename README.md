@@ -49,10 +49,10 @@ YAML 中保存图片对应的十个节点：`35/0`、`40/30`、`45/40`、`50/45`
 ```text
 src/
 ├── app/
-│   ├── client/               # D-Bus 客户端与界面状态
+│   ├── client/               # LinuxThermal.Backend：D-Bus 客户端
 │   ├── models/               # 类型化 QAbstractListModel
 │   ├── platform/             # 单实例与系统托盘集成
-│   └── qml/                  # 按页面、组件、面板和对话框组织的 Qt Quick 界面
+│   └── qml/                  # LinuxThermal.Control：页面、状态、组件、面板与对话框
 ├── daemon/
 │   ├── control/              # 后端聚合、模式与安全策略
 │   ├── config/               # 默认曲线解析与备份
@@ -78,14 +78,16 @@ src/
 标题右侧提供两个主页面入口：
 
 ```text
-Linux Thermal Control  [Control] [Info]
+Linux 热管理  [散热控制] [设备信息]  [外观]
 ```
 
-- `Control`（默认）：CPU/GPU 温度、运行模式、安全告警和自定义风扇曲线；
-- `Info`：安全启动与 MOK 密钥注册状态、风扇与控制能力、检测到的控制后端。
+- `散热控制`（默认）：CPU/GPU 温度、运行模式、安全告警和自定义风扇曲线；
+- `设备信息`：安全启动与 MOK 密钥注册状态、风扇与控制能力、检测到的控制后端。
+
+右上角“外观”支持跟随系统、浅色和深色。偏好会自动保存，界面随系统字体放大。卡片滚动入场、按钮切换、选中标记和曲线编辑均带有动效。前端模块边界、设计取舍、回归测试与截图方法见 [前端结构与视觉规范](docs/frontend.md)。
 
 安全启动状态直接读取 EFI `SecureBoot-*` 变量；MOK 状态由守护进程核对
-Ubuntu DKMS 公钥是否已注册。Info 页面不会建议关闭 Secure Boot。
+Ubuntu DKMS 公钥是否已注册。设备信息页面不会建议关闭 Secure Boot。
 
 ## 系统托盘与退出
 

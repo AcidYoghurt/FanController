@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
 Panel {
@@ -41,10 +40,10 @@ Panel {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 3
-                Text { text: qsTr("自定义风扇曲线"); color: Theme.text; font.pixelSize: 18; font.weight: Font.DemiBold; textFormat: Text.PlainText }
-                Text { Layout.fillWidth: true; text: qsTr("每个控制区域拥有独立曲线与安全边界。"); color: Theme.muted; font.pixelSize: 12; textFormat: Text.PlainText; elide: Text.ElideRight }
+                Text { text: qsTr("自定义风扇曲线"); color: Theme.text; font.pixelSize: Theme.headingSize; font.weight: Font.DemiBold; textFormat: Text.PlainText }
+                Text { Layout.fillWidth: true; text: qsTr("每个控制区域拥有独立曲线与安全边界。"); color: Theme.muted; font.pixelSize: Theme.captionSize; textFormat: Text.PlainText; elide: Text.ElideRight }
             }
-            ComboBox {
+            SelectField {
                 id: zoneSelector
                 Layout.preferredWidth: Math.min(320, root.width * 0.42)
                 model: root.zoneModel
@@ -75,8 +74,8 @@ Panel {
                 id: conflictRow
                 anchors.fill: parent
                 anchors.margins: 11
-                Text { Layout.fillWidth: true; text: qsTr("服务端曲线已变化，本地未保存编辑暂未覆盖。"); color: Theme.text; font.pixelSize: 11; wrapMode: Text.WordWrap; textFormat: Text.PlainText }
-                Button { text: qsTr("放弃本地编辑"); onClicked: root.discardRequested() }
+                Text { Layout.fillWidth: true; text: qsTr("服务端曲线已变化，本地未保存编辑暂未覆盖。"); color: Theme.text; font.pixelSize: Theme.captionSize; wrapMode: Text.WordWrap; textFormat: Text.PlainText }
+                ActionButton { text: qsTr("放弃本地编辑"); onClicked: root.discardRequested() }
             }
         }
 
@@ -84,7 +83,7 @@ Panel {
             visible: !root.curveSupported
             Layout.fillWidth: true
             text: root.zoneModel.count === 0 ? qsTr("没有检测到可控制的风扇区域。") : qsTr("所选区域不支持基于温度的自定义曲线。")
-            color: Theme.muted; font.pixelSize: 12; wrapMode: Text.WordWrap; textFormat: Text.PlainText
+            color: Theme.muted; font.pixelSize: Theme.captionSize; wrapMode: Text.WordWrap; textFormat: Text.PlainText
         }
 
         GridLayout {
@@ -96,7 +95,9 @@ Panel {
             rowSpacing: 16
 
             CurveChart {
+                viewport: root.viewport
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 Layout.preferredWidth: 560
                 Layout.minimumWidth: 300
                 points: root.curveModel.points
@@ -111,48 +112,17 @@ Panel {
                 spacing: 9
                 Repeater {
                     model: root.curveModel
-                    delegate: RowLayout {
-                        id: pointRow
-                        required property int index
-                        required property int temperature
-                        required property int duty
-                        required property bool fixed
-                        readonly property var allPoints: root.curveModel.points
-                        readonly property var previousPoint: index > 0 ? allPoints[index - 1] : null
-                        readonly property var nextPoint: index + 1 < allPoints.length ? allPoints[index + 1] : null
+                    delegate: CurvePointRow {
+                        required index
+                        required temperature
+                        required duty
+                        required fixed
                         Layout.fillWidth: true
-                        spacing: 8
-                        Text { Layout.preferredWidth: 34; text: qsTr("P%1").arg(pointRow.index + 1); color: Theme.text; font.pixelSize: 12; font.weight: Font.DemiBold; textFormat: Text.PlainText }
-                        SpinBox {
-                            id: temperatureBox
-                            Layout.fillWidth: true
-                            from: pointRow.previousPoint ? Number(pointRow.previousPoint.temperature) + 1 : 30
-                            to: pointRow.nextPoint ? Number(pointRow.nextPoint.temperature) - 1 : root.maximumTemperature
-                            value: pointRow.temperature
-                            editable: true
-                            live: true
-                            enabled: root.connected && !pointRow.fixed && !root.busy
-                            Accessible.name: qsTr("P%1 温度").arg(pointRow.index + 1)
-                            Accessible.description: pointRow.fixed ? qsTr("最高温度端点，只读") : qsTr("风扇曲线温度控制点")
-                            textFromValue: function(number, locale) { return Number(number).toLocaleString(locale, "f", 0) + " °C" }
-                            valueFromText: function(text, locale) { return Number.fromLocaleString(locale, text.replace("°C", "").trim()) }
-                            onValueModified: root.pointEdited(pointRow.index, value, dutyBox.value)
-                        }
-                        SpinBox {
-                            id: dutyBox
-                            Layout.fillWidth: true
-                            from: pointRow.previousPoint ? Number(pointRow.previousPoint.duty) : root.minimumDuty
-                            to: pointRow.nextPoint ? Number(pointRow.nextPoint.duty) : 100
-                            value: pointRow.duty
-                            editable: true
-                            live: true
-                            enabled: root.connected && !pointRow.fixed && !root.busy
-                            Accessible.name: qsTr("P%1 风扇占空比").arg(pointRow.index + 1)
-                            Accessible.description: pointRow.fixed ? qsTr("最高占空比端点，只读") : qsTr("风扇曲线占空比控制点")
-                            textFromValue: function(number, locale) { return Number(number).toLocaleString(locale, "f", 0) + " %" }
-                            valueFromText: function(text, locale) { return Number.fromLocaleString(locale, text.replace("%", "").trim()) }
-                            onValueModified: root.pointEdited(pointRow.index, temperatureBox.value, value)
-                        }
+                        allPoints: root.curveModel.points
+                        minimumDuty: root.minimumDuty
+                        maximumTemperature: root.maximumTemperature
+                        editable: root.connected && !root.busy
+                        onPointEdited: (temperature, duty) => root.pointEdited(index, temperature, duty)
                     }
                 }
             }
@@ -170,19 +140,18 @@ Panel {
                 anchors.fill: parent
                 anchors.margins: 12
                 text: qsTr("此区域最低占空比为 %1%；曲线终点固定为 %2°C / 100%；达到 %3°C 或传感器失效时会提前触发全速保护。降温需求持续 5 秒后，占空比每秒最多降低 2%。").arg(root.minimumDuty).arg(root.maximumTemperature).arg(root.safetyTemperature)
-                color: Theme.muted; font.pixelSize: 11; wrapMode: Text.WordWrap; textFormat: Text.PlainText
+                color: Theme.muted; font.pixelSize: Theme.captionSize; wrapMode: Text.WordWrap; textFormat: Text.PlainText
             }
         }
 
-        RowLayout {
+        Flow {
             visible: root.curveSupported
             Layout.fillWidth: true
             spacing: 10
-            Button { text: qsTr("恢复默认"); enabled: root.connected && !root.busy; onClicked: root.resetRequested() }
-            Item { Layout.fillWidth: true }
-            Text { visible: root.curveModel.dirty; text: qsTr("有未保存更改"); color: Theme.warning; font.pixelSize: 11; textFormat: Text.PlainText }
-            Button { text: qsTr("仅保存"); enabled: root.connected && !root.busy && root.curveModel.dirty; onClicked: root.saveRequested() }
-            Button { text: qsTr("保存并启用全部区域曲线"); enabled: root.connected && !root.busy; highlighted: true; onClicked: root.applyRequested() }
+            ActionButton { text: qsTr("恢复默认"); enabled: root.connected && !root.busy; onClicked: root.resetRequested() }
+            ActionButton { text: qsTr("仅保存"); enabled: root.connected && !root.busy && root.curveModel.dirty; onClicked: root.saveRequested() }
+            ActionButton { text: qsTr("保存并启用全部区域曲线"); enabled: root.connected && !root.busy; highlighted: true; onClicked: root.applyRequested() }
+            Text { visible: root.curveModel.dirty; topPadding: 10; text: qsTr("有未保存更改"); color: Theme.warning; font.pixelSize: Theme.captionSize; textFormat: Text.PlainText }
         }
     }
 }

@@ -30,9 +30,6 @@ install_manifest.txt
 *.swo
 *~
 
-# Local agent/tool metadata
-/.agents/
-
 # Python caches
 __pycache__/
 *.py[cod]
